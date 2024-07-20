@@ -1,11 +1,11 @@
 from pathlib import Path
 import warnings
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 import numpy as np
 import numpy.typing as npt
 
 
-def read_event(filepath: str, filepath_bias: Optional[str] = None) -> Dict[str, np.ndarray]:
+def read_event(filepath: str, filepath_bias: Optional[str] = None) -> Dict[str, Any]:
     suffix = Path(filepath).suffix
     if suffix == ".raw":
         # Metavision raw format
