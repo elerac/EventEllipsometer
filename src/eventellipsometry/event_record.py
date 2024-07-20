@@ -1,4 +1,5 @@
 import argparse
+import os
 import datetime
 from typing import Optional, Tuple
 from pathlib import Path
@@ -97,8 +98,10 @@ def record(
 
     device.get_i_events_stream().stop_log_raw_data()
 
+    filesize = os.path.getsize(filepath_raw)
+
     print(f"{datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} Recording finished. ")
-    print(f"  Exported to: {filepath_raw}, {filepath_bias}")
+    print(f"  Exported to: {filepath_raw} ({filesize / 1024 / 1024:.2f} MB)")
 
     # Save bias values
     bias_diff = device.get_i_ll_biases().get("bias_diff")
@@ -120,7 +123,7 @@ def record(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", type=str, default="record.raw", help="Output file path")
+    parser.add_argument("--output", type=str, default=None, help="Output file path")
     parser.add_argument("--duration", type=float, default=5.0, help="Duration of recording [s]")
     parser.add_argument("--bias_diff", type=int, default=0, help="bias_diff")
     parser.add_argument("--bias_diff_on", type=int, default=0, help="bias_diff_on")
