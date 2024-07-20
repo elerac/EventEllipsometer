@@ -1,5 +1,5 @@
 import time
-from typing import Optional
+from typing import Optional, Dict, Any
 import numpy as np
 import numpy.typing as npt
 from tqdm import trange, tqdm
@@ -10,18 +10,20 @@ class FastEventAccess:
 
     def __init__(
         self,
-        x: npt.NDArray,
-        y: npt.NDArray,
-        t: npt.NDArray,
-        p: npt.NDArray,
-        width: int,
-        height: int,
+        events: Dict[str, Any],
         preview: bool = False,
     ):
         start_time = time.time()
         if preview:
             print(f"This is {self.__class__.__name__} class.")
             print("Converting event data...")
+
+        x = events["x"]
+        y = events["y"]
+        t = events["t"]
+        p = events["p"]
+        width = events["width"]
+        height = events["height"]
 
         # Sort by t
         sort_idx = np.argsort(t)
@@ -96,13 +98,15 @@ def main():
     print("height:", height)
     print("-" * 20)
 
-    event_data = FastEventAccess(x, y, t, p, width, height, preview=True)
+    events = {"x": x, "y": y, "t": t, "p": p, "width": width, "height": height}
+
+    events_fast = FastEventAccess(events, preview=True)
 
     print("-" * 20)
     print("Test get method")
     for _ in range(10):
         ix, iy = np.random.randint(0, width), np.random.randint(0, height)
-        t_ixy, p_ixy = event_data.get(ix, iy)
+        t_ixy, p_ixy = events_fast.get(ix, iy)
 
         print(f"({ix:4d}, {iy:4d}) - Num of events: {len(t_ixy)}, t: {t_ixy}")
 
