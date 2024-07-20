@@ -62,7 +62,10 @@ def read_event(filepath: str, filepath_bias: Optional[str] = None) -> Dict[str, 
         data["height"] = height
 
         # Bias values
-        if filepath_bias is not None:
+        if filepath_bias is None:
+            filepath_bias = Path(filepath).with_suffix(".bias")
+
+        if Path(filepath_bias).exists():
             with open(filepath_bias, "r") as f:
                 while True:
                     line = f.readline()
