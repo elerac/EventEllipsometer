@@ -1,0 +1,32 @@
+[project]
+name = "eventellipsometry"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "Ryota Maeda", email = "42407614+elerac@users.noreply.github.com" }
+]
+dependencies = [
+    "numpy>=2.0.0",
+    "opencv-python>=4.10.0.84",
+    "matplotlib>=3.9.1",
+    "h5py>=3.11.0",
+    "polanalyser>=3.0.0",
+    "sympy>=1.13.1",
+    "tqdm>=4.66.4",
+]
+readme = "README.md"
+requires-python = ">= 3.8"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/eventellipsometry"]
