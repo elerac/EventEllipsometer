@@ -13,6 +13,7 @@ dependencies = [
     "polanalyser>=3.0.0",
     "sympy>=1.13.1",
     "tqdm>=4.66.4",
+    "nanobind==2.0",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
@@ -30,3 +31,6 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/eventellipsometry"]
+
+[project.scripts]
+build_cpp = "build_cpp:main"

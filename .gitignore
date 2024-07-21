@@ -9,5 +9,11 @@ wheels/
 # venv
 .venv
 
+# cpp generated files
+*.pyd
+*.exp
+*.lib
+*.pdb
+
 # event data
 recordings/
