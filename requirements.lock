@@ -54,5 +54,7 @@ sympy==1.13.1
     # via eventellipsometry
 tqdm==4.66.4
     # via eventellipsometry
+typing-extensions==4.12.2
+    # via eventellipsometry
 zipp==3.19.2
     # via importlib-resources

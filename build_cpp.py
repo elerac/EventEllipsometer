@@ -1,6 +1,7 @@
 import subprocess
 import os
 import shutil
+from nanobind.stubgen import StubGen
 
 
 def main():
@@ -17,6 +18,16 @@ def main():
         shutil.copytree("build/Debug", "src/eventellipsometry/_eventellipsometry_impl")
     else:
         raise
+
+    import eventellipsometry as ee
+
+    module = ee._eventellipsometry_impl._eventellipsometry_impl
+    sg = StubGen(module)
+
+    sg.put(module)
+    pyi = sg.get()
+    with open("src/eventellipsometry/__init__.pyi", "w") as f:
+        f.write(pyi)
 
 
 if __name__ == "__main__":

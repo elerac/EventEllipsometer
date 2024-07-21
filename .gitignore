@@ -15,5 +15,8 @@ wheels/
 *.lib
 *.pdb
 
+# stubgen generated files
+*.pyi
+
 # event data
 recordings/
