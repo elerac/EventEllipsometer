@@ -11,6 +11,8 @@ class FastEventAccess:
     def __init__(
         self,
         events: Dict[str, Any],
+        t_min: Optional[float] = None,
+        t_max: Optional[float] = None,
         preview: bool = False,
     ):
         start_time = time.time()
@@ -24,6 +26,15 @@ class FastEventAccess:
         p = events["p"]
         width = events["width"]
         height = events["height"]
+
+        if not (t_min is None and t_max is None):
+            t_min = t_min if t_min is not None else np.min(t)
+            t_max = t_max if t_max is not None else np.max(t)
+            index = np.where((t_min <= t) & (t < t_max))
+            x = x[index]
+            y = y[index]
+            t = t[index]
+            p = p[index]
 
         # Sort by t
         sort_idx = np.argsort(t)
