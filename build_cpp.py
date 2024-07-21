@@ -19,14 +19,18 @@ def main():
     else:
         raise
 
+    # Generate __init__.py
+    with open("src/eventellipsometry/_eventellipsometry_impl/__init__.py", "w") as f:
+        f.write("from ._eventellipsometry_impl import *")
+
+    # Generate pyi file
     import eventellipsometry as ee
 
     module = ee._eventellipsometry_impl._eventellipsometry_impl
     sg = StubGen(module)
-
     sg.put(module)
     pyi = sg.get()
-    with open("src/eventellipsometry/__init__.pyi", "w") as f:
+    with open("src/eventellipsometry/_eventellipsometry_impl/__init__.pyi", "w") as f:
         f.write(pyi)
 
 
