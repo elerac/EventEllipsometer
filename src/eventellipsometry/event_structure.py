@@ -43,7 +43,7 @@ class FastEventAccess:
         # Convert to ndarray
         dtype_t = t.dtype
         dtype_p = p.dtype
-        for j in trange(height, disable=not preview, desc="Convert to ndarray"):
+        for j in trange(height, disable=not preview, desc=f"Convert to ndarray ({width}x{height})"):
             for i in range(width):
                 self.t_xy_list[j][i] = np.array(self.t_xy_list[j][i], dtype=dtype_t)
                 self.p_xy_list[j][i] = np.array(self.p_xy_list[j][i], dtype=dtype_p)
