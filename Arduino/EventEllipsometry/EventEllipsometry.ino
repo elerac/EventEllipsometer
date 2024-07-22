@@ -1,137 +1,144 @@
 #include <PID_v1.h>
+#define DEBUG 1
 
-double setpoint1, input1, output1;
-PID myPID1(&input1, &output1, &setpoint1, 700, 2000, 10, DIRECT);
+// Baud rate
+unsigned long baudRate = 115200;
 
-double setpoint2, input2, output2;
-PID myPID2(&input2, &output2, &setpoint2, 50, 150, 2, DIRECT);
+// Pin assignment
+pin_size_t pinIn_x1 = 2;
+pin_size_t pinOut_x1 = 5;
+pin_size_t pinIn_x5 = 3;
+pin_size_t pinOut_x5 = 6;
+pin_size_t pinOut_trig = 12;
 
-double setpoint3, input3, output3;
-PID myPID3(&input3, &output3, &setpoint3, 0.005, 0.01, 0.0001, DIRECT);
+// PID parameters
+double setpoint_x1 = 24.0;
+double setpoint_x5 = setpoint_x1 * 5.0;
+double input_x1, output_x1;
+double input_x5, output_x5;
+PID myPID_x1(&input_x1, &output_x1, &setpoint_x1, 50, 150, 0.5, DIRECT);
+PID myPID_x5(&input_x5, &output_x5, &setpoint_x5, 50, 150, 0.5, DIRECT);
 
 // Initialize
-unsigned long period1 = 1000000000; // [us/rot]
-unsigned long period2 = 1000000000; // [us/rot]
+unsigned long period_x1 = 1000000000; // [us/rot]
+unsigned long period_x5 = 1000000000; // [us/rot]
+unsigned int count_x1 = 0;
+unsigned int count_x5 = 0;
+unsigned long t_prev_x1 = micros();
+unsigned long t_prev_x5 = micros();
+int trigState = LOW;
 
-unsigned long t_prev1 = micros();
-unsigned long t_prev2 = micros();
-
-double diff = 1.0;
-long t_diff = 0;
-
-unsigned int count1 = 0;
-unsigned int count2 = 0;
-
-double residual1 = 0.0f;
-double residual2 = 0.0f;
-
-void measurePeriod1()
-{
-    unsigned long t_now = micros();
-    period1 = (t_now - t_prev1);
-    t_prev1 = t_now;
-
-    t_diff = t_prev1 - t_prev2; // min(t_prev1 - t_prev2, (t_prev2 + 41667) - t_prev1);
-
-    double freq1 = 1000000.0 / (double)(period1);
-    residual1 += (freq1 - 24);
-
-    count1++;
-}
-
-void measurePeriod2()
+void updatePeriod_x1()
 {
     static bool flag = true;
     if (flag)
     {
         unsigned long t_now = micros();
-        period2 = (t_now - t_prev2);
-        t_prev2 = t_now;
-
-        double freq2 = 1000000.0 / (double)(period2);
-
-        residual2 += (freq2 - 120);
-        count2++;
+        period_x1 = (t_now - t_prev_x1);
+        t_prev_x1 = t_now;
+        count_x1++;
     }
     flag = !flag;
+
+    // Trigger
+    if (trigState == LOW)
+    {
+        trigState = HIGH;
+        digitalWrite(pinOut_trig, trigState);
+    }
+}
+
+void updatePeriod_x5()
+{
+    static bool flag = true;
+    if (flag)
+    {
+        unsigned long t_now = micros();
+        period_x5 = (t_now - t_prev_x5);
+        t_prev_x5 = t_now;
+        count_x5++;
+    }
+    flag = !flag;
+
+    // Trigger
+    if (trigState == HIGH)
+    {
+        trigState = LOW;
+        digitalWrite(pinOut_trig, trigState);
+    }
 }
 
 void setup()
 {
-    Serial.begin(9600);
-    pinMode(LED_BUILTIN, OUTPUT);
+    // Digital out settings
+    pinMode(pinOut_trig, OUTPUT);
+    digitalWrite(pinOut_trig, trigState);
 
+    // Analog out settings
     analogWriteResolution(12);
+    pinMode(pinOut_x1, OUTPUT);
+    pinMode(pinOut_x5, OUTPUT);
 
-    pinMode(5, OUTPUT);
-    // pinMode(6, OUTPUT);
-    analogWrite(5, 1000);
-    // digitalWrite(6, 0);
-    pinMode(2, INPUT);
-    attachInterrupt(digitalPinToInterrupt(2), measurePeriod1, RISING);
+    // Interrupt settings
+    pinMode(pinIn_x1, INPUT);
+    attachInterrupt(digitalPinToInterrupt(pinIn_x1), updatePeriod_x1, RISING);
+    pinMode(pinIn_x5, INPUT);
+    attachInterrupt(digitalPinToInterrupt(pinIn_x5), updatePeriod_x5, RISING);
 
-    delay(1);
+    // PID settings
+    myPID_x1.SetMode(AUTOMATIC);
+    myPID_x5.SetMode(AUTOMATIC);
+    myPID_x1.SetOutputLimits(0, 4095);
+    myPID_x5.SetOutputLimits(0, 4095);
 
-    pinMode(6, OUTPUT);
-    // pinMode(10, OUTPUT);
-    analogWrite(6, 1000);
-    // digitalWrite(10, 0);
-    pinMode(3, INPUT);
-    attachInterrupt(digitalPinToInterrupt(3), measurePeriod2, RISING);
-
+    // Calibration
     double coff = 1.002154632459789;
     coff = 1.0;
-    setpoint1 = 24 * coff;
-    setpoint2 = 120 * coff;
-    setpoint3 = 0;
+    setpoint_x1 = setpoint_x1 * coff;
+    setpoint_x5 = setpoint_x5 * coff;
 
-    myPID1.SetMode(AUTOMATIC);
-    myPID2.SetMode(AUTOMATIC);
-    myPID3.SetMode(AUTOMATIC);
-
-    myPID1.SetOutputLimits(0, 4095);
-    myPID2.SetOutputLimits(0, 4095);
-    myPID3.SetOutputLimits(-4095, 4095);
-
-    delay(2000);
+#if DEBUG
+    Serial.begin(baudRate);
+#endif
 }
 
 void loop()
 {
     delay(8);
+    unsigned long t_now = micros();
 
-    double freq1 = 1000000.0 / (double)(period1);
-    double freq2 = 1000000.0 / (double)(period2);
+    double freq_x1 = 1000000.0 / (double)(period_x1);
+    double freq_x5 = 1000000.0 / (double)(period_x5);
 
-    input1 = freq1;
-    input2 = freq2;
+    input_x1 = freq_x1;
+    input_x5 = freq_x5;
 
-    myPID1.Compute();
-    myPID2.Compute();
+    myPID_x1.Compute();
+    myPID_x5.Compute();
 
-    analogWrite(5, (int)output1);
-    analogWrite(6, (int)output2);
+    analogWrite(pinOut_x1, (int)output_x1);
+    analogWrite(pinOut_x5, (int)output_x5);
 
-    Serial.print(freq1);
-    Serial.print(", ");
-    Serial.print(freq2);
-    Serial.print(", ");
-    Serial.print(output1);
-    Serial.print(", ");
-    Serial.print(output2);
-    Serial.print(", ");
-    Serial.print(count1);
-    Serial.print(", ");
-    Serial.print(count2);
-    Serial.print(", ");
-    Serial.print(count1 - count2);
-    Serial.print(", ");
-    Serial.print(t_diff);
-    // Serial.print(", ");
-    // Serial.print((double) t_diff / 8333.333 * 36);
+    unsigned long t_end_pid = micros();
 
-    // Serial.print(residual1);
-    // Serial.print(", ");
-    // Serial.print(residual2);
-    Serial.println();
+#if DEBUG
+    Serial.print(t_now);
+    Serial.print(", ");
+    Serial.print(freq_x1, 1);
+    Serial.print(", ");
+    Serial.print(freq_x5, 1);
+    Serial.print(", ");
+    Serial.print(output_x1, 0);
+    Serial.print(", ");
+    Serial.print(output_x5, 0);
+    Serial.print(", ");
+    Serial.print(count_x1);
+    Serial.print(", ");
+    Serial.print(count_x5);
+    Serial.print(", ");
+    Serial.print(t_end_pid - t_now);
+    Serial.print(", ");
+    unsigned long t_end_serial = micros();
+    Serial.println(t_end_serial - t_end_pid);
+#endif
 }
