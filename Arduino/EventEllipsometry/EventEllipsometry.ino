@@ -1,5 +1,6 @@
 #include <PID_v1.h>
 #define DEBUG 1
+#define DEBUG_LITE 1
 
 // Baud rate
 unsigned long baudRate = 115200;
@@ -97,7 +98,7 @@ void setup()
     setpoint_x1 = setpoint_x1 * coff;
     setpoint_x5 = setpoint_x5 * coff;
 
-#if DEBUG
+#if DEBUG || DEBUG_LITE
     Serial.begin(baudRate);
 #endif
 }
@@ -121,6 +122,14 @@ void loop()
 
     unsigned long t_end_pid = micros();
 
+#if DEBUG || DEBUG_LITE
+#if DEBUG_LITE && !DEBUG
+    Serial.print(freq_x1, 1);
+    Serial.print(", ");
+    Serial.print(freq_x5, 1);
+    Serial.println();
+#endif
+
 #if DEBUG
     Serial.print(t_now);
     Serial.print(", ");
@@ -140,5 +149,6 @@ void loop()
     Serial.print(", ");
     unsigned long t_end_serial = micros();
     Serial.println(t_end_serial - t_end_pid);
+#endif
 #endif
 }
