@@ -30,15 +30,20 @@ Connection pin assignment:
 - [Metavision SDK Docs | Timing Interfaces](https://docs.prophesee.ai/stable/hw/manuals/timing_interfaces.html#trigger-interfaces)
 - [Metavision Training Videos | Trigger and Synchronization Interfaces (YouTube)](https://youtu.be/EVoATjOM7co?si=G-gSWAB0OuK2Qz4z)
 
-### Motors 
+### Motors
 
-Assumption: 
+#### Motor Setup and Control Assumptions
+
 - The motor has a encoder (two blades and one photointerrupter).
 - Arduino measures the speed (frequency) of the motor by the encoder.
 - The motor speed should be controlled by the Arduino with a PID controller.
 - There are two motors: M1 and M5. The M5 motor rotates 5 times faster than M1.
 
-Rules for triggering the camera:
+#### Rules of Trigger for Event Camera
 
-- If the state is pos (by M1), then the M5 is allowed to produce a neg-edge.
-- While the state is neg (by M5), then the M1 is allowed to produce a pos-edge.
+Trigger is generated when Arduino detects the encoder signal (two times per rotation) of two motors. Arduino generates the trigger signal with the following rules:
+
+- trigState is the state of the trigger signal. It can be either HIGH or LOW.
+- If the state is HIGH and M5 encoder signal is detected, then the state is changed to LOW.
+- If the state is LOW and M1 encoder signal is detected, then the state is changed to HIGH.
+
