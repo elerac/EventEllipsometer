@@ -35,3 +35,4 @@ packages = ["src/eventellipsometry"]
 
 [project.scripts]
 build_cpp = "build_cpp:main"
+record = "eventellipsometry.event_record:main"
