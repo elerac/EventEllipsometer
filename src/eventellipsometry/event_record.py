@@ -40,6 +40,21 @@ def record(
     device_config.enable_biases_range_check_bypass(True)
     device = initiate_device("")
 
+    # ROI
+    if roi is not None:
+        if len(roi) == 4:
+            x, y, width, height = roi
+        if len(roi) == 2:
+            width, height = roi
+            geometry = device.get_i_geometry()
+            sensor_width, sensor_height = geometry.get_width(), geometry.get_height()
+            x = (sensor_width - width) // 2
+            y = (sensor_height - height) // 2
+        else:
+            raise ValueError("Invalid ROI format. ")
+        device.get_i_roi().enable(True)
+        device.get_i_roi().set_window(I_ROI.Window(x, y, width, height))
+
     # Enable trigger
     i_trigger_in = device.get_i_trigger_in()
     i_trigger_in.enable(metavision_hal.I_TriggerIn.Channel.MAIN)
@@ -51,12 +66,6 @@ def record(
     device.get_i_ll_biases().set("bias_fo", bias_fo)  # the low-pass filter
     device.get_i_ll_biases().set("bias_hpf", bias_hpf)  # the high-pass filter
     device.get_i_ll_biases().set("bias_refr", bias_refr)  # the refractory period
-
-    # ROI
-    if roi is not None:
-        x0, y0, x1, y1 = roi
-        device.get_i_roi().enable(True)
-        device.get_i_roi().set_window(I_ROI.Window(x0, y0, x1, y1))
 
     device.get_i_events_stream().log_raw_data(str(filepath_raw))
 
@@ -131,7 +140,7 @@ def main():
     parser.add_argument("--bias_fo", type=int, default=0, help="bias_fo")
     parser.add_argument("--bias_hpf", type=int, default=0, help="bias_hpf")
     parser.add_argument("--bias_refr", type=int, default=0, help="bias_refr")
-    parser.add_argument("--roi", type=int, nargs=4, default=None, help="ROI window [x0, y0, x1, y1]")
+    parser.add_argument("--roi", type=int, nargs="+", default=None, help="ROI: (x, y, width, height) or (width, height) or (width,)")
     args = parser.parse_args()
 
     record(args.output, args.duration, args.bias_diff, args.bias_diff_on, args.bias_diff_off, args.bias_fo, args.bias_hpf, args.bias_refr, args.roi)
