@@ -179,12 +179,17 @@ def main():
     parser.add_argument("--bias_diff", type=int, default=0, help="bias_diff")
     parser.add_argument("--bias_diff_on", type=int, default=0, help="bias_diff_on")
     parser.add_argument("--bias_diff_off", type=int, default=0, help="bias_diff_off")
+    parser.add_argument("--bias_diff_on_off", type=int, default=None, help="Set bias_diff_on and bias_diff_off to the same value")
     parser.add_argument("--bias_fo", type=int, default=0, help="bias_fo")
     parser.add_argument("--bias_hpf", type=int, default=0, help="bias_hpf")
     parser.add_argument("--bias_refr", type=int, default=0, help="bias_refr")
     parser.add_argument("--roi", type=int, nargs="+", default=None, help="ROI: (x, y, width, height) or (width, height) or (width,)")
     args = parser.parse_args()
     verbose = True
+
+    if args.bias_diff_on_off is not None:
+        args.bias_diff_on = args.bias_diff_on_off
+        args.bias_diff_off = args.bias_diff_on_off
 
     record(args.output, args.duration, args.bias_diff, args.bias_diff_on, args.bias_diff_off, args.bias_fo, args.bias_hpf, args.bias_refr, args.roi, verbose)
 
