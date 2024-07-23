@@ -17,8 +17,8 @@ double setpoint_x1 = 24.0;
 double setpoint_x5 = setpoint_x1 * 5.0;
 double input_x1, output_x1;
 double input_x5, output_x5;
-PID myPID_x1(&input_x1, &output_x1, &setpoint_x1, 50, 150, 0.5, DIRECT);
-PID myPID_x5(&input_x5, &output_x5, &setpoint_x5, 50, 150, 0.5, DIRECT);
+PID myPID_x1(&input_x1, &output_x1, &setpoint_x1, 100, 150, 0.5, DIRECT);
+PID myPID_x5(&input_x5, &output_x5, &setpoint_x5, 100, 150, 0.5, DIRECT);
 
 // Initialize
 unsigned long period_x1 = 1000000000; // [us/rot]
