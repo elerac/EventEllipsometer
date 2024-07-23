@@ -1,5 +1,5 @@
 #include <PID_v1.h>
-#define DEBUG 1
+#define DEBUG 0
 #define DEBUG_LITE 1
 
 // Baud rate
@@ -127,6 +127,10 @@ void loop()
     Serial.print(freq_x1, 1);
     Serial.print(", ");
     Serial.print(freq_x5, 1);
+    Serial.print(", ");
+    Serial.print(output_x1, 0);
+    Serial.print(", ");
+    Serial.print(output_x5, 0);
     Serial.println();
 #endif
 
