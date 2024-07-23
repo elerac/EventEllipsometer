@@ -44,6 +44,7 @@ def record(
     device = initiate_device("")
 
     # ROI
+    # https://docs.prophesee.ai/stable/hw/manuals/region_of_interest.html
     if roi is not None:
         if len(roi) == 4:
             x, y, width, height = roi
@@ -59,10 +60,12 @@ def record(
         device.get_i_roi().set_window(I_ROI.Window(x, y, width, height))
 
     # Enable trigger
+    # https://docs.prophesee.ai/stable/hw/manuals/timing_interfaces.html
     i_trigger_in = device.get_i_trigger_in()
     i_trigger_in.enable(metavision_hal.I_TriggerIn.Channel.MAIN)
 
     # Biases
+    # https://docs.prophesee.ai/stable/hw/manuals/biases.html
     device.get_i_ll_biases().set("bias_diff", bias_diff)
     device.get_i_ll_biases().set("bias_diff_on", bias_diff_on)  # the contrast threshold for ON events
     device.get_i_ll_biases().set("bias_diff_off", bias_diff_off)  # the contrast threshold for OFF events
