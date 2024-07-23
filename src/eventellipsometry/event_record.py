@@ -21,6 +21,37 @@ def record(
     roi: Optional[list[int]] = None,
     verbose: bool = True,
 ) -> Tuple[str, str]:
+    """Record events and save to a file (.raw)
+
+    Parameters
+    ----------
+    filepath : Optional[str], optional
+        Output file path, by default None. If None, the file will be saved in the "recordings" directory with the current timestamp.
+    duration : float, optional
+        Duration of recording [s], by default 5.0
+    bias_diff : int, optional
+        bias_diff, by default 0
+    bias_diff_on : int, optional
+        bias_diff_on, by default 0
+    bias_diff_off : int, optional
+        bias_diff_off, by default 0
+    bias_fo : int, optional
+        bias_fo, by default 0
+    bias_hpf : int, optional
+        bias_hpf, by default 0
+    bias_refr : int, optional
+        bias_refr, by default 0
+    roi : Optional[list[int]], optional
+        ROI: (x, y, width, height) or (width, height) or (width,), by default None
+    verbose : bool, optional
+        Print log messages, by default True
+
+    Returns
+    -------
+    Tuple[str, str]
+        File path of the recorded events (.raw) and bias values (.bias)
+    """
+
     filepath_raw = filepath
     if filepath_raw is None:
         filepath_raw = Path("recordings") / f"recording_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.raw"
