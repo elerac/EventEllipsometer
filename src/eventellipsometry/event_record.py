@@ -19,6 +19,7 @@ def record(
     bias_hpf: int = 0,
     bias_refr: int = 0,
     roi: Optional[list[int]] = None,
+    verbose: bool = True,
 ) -> Tuple[str, str]:
     filepath_raw = filepath
     if filepath_raw is None:
@@ -27,13 +28,15 @@ def record(
     if Path(filepath_raw).suffix != ".raw":
         filepath_raw = Path(filepath_raw).with_suffix(".raw")
 
-    print(f"{datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} Initializing device... ")
-    print(f"  filepath={filepath}, duration={duration}, bias_diff={bias_diff}, bias_diff_on={bias_diff_on}, bias_diff_off={bias_diff_off}, bias_fo={bias_fo}, bias_hpf={bias_hpf}, bias_refr={bias_refr}, roi={roi} ")
+    if verbose:
+        print(f"{datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} Initializing device... ")
+        print(f"  filepath={filepath}, duration={duration}, bias_diff={bias_diff}, bias_diff_on={bias_diff_on}, bias_diff_off={bias_diff_off}, bias_fo={bias_fo}, bias_hpf={bias_hpf}, bias_refr={bias_refr}, roi={roi} ")
 
     filepath_bias = Path(filepath_raw).with_suffix(".bias")
 
     if not Path(filepath_raw).parent.exists():
-        print(f"  Make directory: {Path(filepath_raw).parent}")
+        if verbose:
+            print(f"  Make directory: {Path(filepath_raw).parent}")
         Path(filepath_raw).parent.mkdir(parents=True)
 
     device_config = DeviceConfig()
@@ -69,7 +72,8 @@ def record(
 
     device.get_i_events_stream().log_raw_data(str(filepath_raw))
 
-    print(f"{datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} Recording events... ")
+    if verbose:
+        print(f"{datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} Recording events... ")
 
     max_duration_sec = duration
     mv_iterator = EventsIterator.from_device(device=device, max_duration=max_duration_sec * 1000000)
@@ -102,15 +106,19 @@ def record(
 
             mv_iterator.reader.clear_ext_trigger_events()
 
-        print(f"  Events: pos={num_eve_pos}, neg={num_eve_neg}, Triggers: pos={num_trig_pos}, neg={num_trig_neg}", end="\r")
-    print()
+        if verbose:
+            print(f"  Events: pos={num_eve_pos}, neg={num_eve_neg}, Triggers: pos={num_trig_pos}, neg={num_trig_neg}", end="\r")
+
+    if verbose:
+        print()
 
     device.get_i_events_stream().stop_log_raw_data()
 
     filesize = os.path.getsize(filepath_raw)
 
-    print(f"{datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} Recording finished. ")
-    print(f"  Exported to: {filepath_raw} ({filesize / 1024 / 1024:.2f} MB)")
+    if verbose:
+        print(f"{datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} Recording finished. ")
+        print(f"  Exported to: {filepath_raw} ({filesize / 1024 / 1024:.2f} MB)")
 
     # Save bias values
     bias_diff = device.get_i_ll_biases().get("bias_diff")
@@ -142,8 +150,9 @@ def main():
     parser.add_argument("--bias_refr", type=int, default=0, help="bias_refr")
     parser.add_argument("--roi", type=int, nargs="+", default=None, help="ROI: (x, y, width, height) or (width, height) or (width,)")
     args = parser.parse_args()
+    verbose = True
 
-    record(args.output, args.duration, args.bias_diff, args.bias_diff_on, args.bias_diff_off, args.bias_fo, args.bias_hpf, args.bias_refr, args.roi)
+    record(args.output, args.duration, args.bias_diff, args.bias_diff_on, args.bias_diff_off, args.bias_fo, args.bias_hpf, args.bias_refr, args.roi, verbose)
 
 
 if __name__ == "__main__":
