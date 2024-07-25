@@ -41,9 +41,9 @@ Connection pin assignment:
 
 #### Rules of Trigger for Event Camera
 
-Trigger is generated when Arduino detects the encoder signal (two times per rotation) of two motors. Arduino generates the trigger signal with the following rules:
+The trigger is generated when Arduino detects the encoder signal (two times per rotation) of two motors. Arduino generates the trigger signal with the following rules:
 
 - trigState is the state of the trigger signal. It can be either HIGH or LOW.
 - If the state is HIGH and M5 encoder signal is detected, then the state is changed to LOW.
 - If the state is LOW and M1 encoder signal is detected, then the state is changed to HIGH.
-
+- Please note that the Arduino's HIGH/LOW states are reversed in the event camera.
