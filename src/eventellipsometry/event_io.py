@@ -115,3 +115,26 @@ def write_event(
     data = {"x": x, "y": y, "p": p, "t": t, "width": width, "height": height, "trigger": trigger}
     data.update(metadata)
     np.savez_compressed(filepath, **data)
+
+
+def main():
+    # raw2npz
+    import argparse
+
+    parser = argparse.ArgumentParser("Convert raw file to npz file")
+    parser.add_argument("filepath_raw", type=str)
+    args = parser.parse_args()
+    filepath_raw = args.filepath_raw
+
+    print("Converting raw file to npz file")
+    print(f"Reading {filepath_raw}")
+    events = read_event(filepath_raw)
+
+    filepath_npz = Path(filepath_raw).with_suffix(".npz")
+
+    print(f"Saved as {filepath_npz}")
+    np.savez_compressed(filepath_npz, **events)
+
+
+if __name__ == "__main__":
+    main()

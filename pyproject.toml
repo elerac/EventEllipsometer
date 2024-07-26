@@ -37,6 +37,7 @@ packages = ["src/eventellipsometry"]
 [project.scripts]
 build_cpp = "build_cpp:main"
 record = "eventellipsometry.event_record:main"
+raw2npz = "eventellipsometry.event_io:main"
 
 [[tool.rye.sources]]
 name = "pytorch"
