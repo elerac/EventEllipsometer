@@ -1,7 +1,7 @@
 import argparse
 import os
 import datetime
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 from pathlib import Path
 from metavision_core.event_io.raw_reader import initiate_device
 from metavision_core.event_io import EventsIterator
@@ -9,12 +9,12 @@ from metavision_hal import I_ROI, DeviceConfig
 import metavision_hal
 
 
-def generate_filename_raw() -> str:
-    return f"recording_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.raw"
+def generate_filename_raw() -> Path:
+    return Path(f"recording_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.raw")
 
 
 def record(
-    filepath: Optional[str] = None,
+    filepath: Optional[Union[str, Path]] = None,
     duration: float = 5.0,
     bias_diff: int = 0,
     bias_diff_on: int = 0,
@@ -29,7 +29,7 @@ def record(
 
     Parameters
     ----------
-    filepath : Optional[str], optional
+    filepath : Optional[str, Path], optional
         Output file path, by default None. If None, the file will be saved in the "recordings" directory with the current timestamp.
     duration : float, optional
         Duration of recording [s], by default 5.0
