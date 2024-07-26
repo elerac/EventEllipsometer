@@ -9,6 +9,10 @@ from metavision_hal import I_ROI, DeviceConfig
 import metavision_hal
 
 
+def generate_filename_raw() -> str:
+    return f"recording_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.raw"
+
+
 def record(
     filepath: Optional[str] = None,
     duration: float = 5.0,
@@ -54,7 +58,7 @@ def record(
 
     filepath_raw = filepath
     if filepath_raw is None:
-        filepath_raw = Path("recordings") / f"recording_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.raw"
+        filepath_raw = Path("recordings") / generate_filename_raw()
 
     if Path(filepath_raw).suffix != ".raw":
         filepath_raw = Path(filepath_raw).with_suffix(".raw")
