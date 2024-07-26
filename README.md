@@ -46,4 +46,6 @@ The trigger is generated when Arduino detects the encoder signal (two times per 
 - trigState is the state of the trigger signal. It can be either HIGH or LOW.
 - If the state is HIGH and M5 encoder signal is detected, then the state is changed to LOW.
 - If the state is LOW and M1 encoder signal is detected, then the state is changed to HIGH.
-- Please note that the Arduino's HIGH/LOW states are reversed in the event camera.
+- Note that the Arduino's HIGH/LOW states are reversed in the event camera.
+  - Arduino: digitalWrite(pin, HIGH); -> Event Camera: trig_p = 0
+  - Arduino: digitalWrite(pin, LOW);  -> Event Camera: trig_p = 1
