@@ -15,6 +15,7 @@ dependencies = [
     "torch==2.3.1+cpu",
     "typing-extensions>=4.9.0",
     "numpy>=1.26.3",
+    "ipykernel>=6.29.5",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
