@@ -18,6 +18,11 @@ The event camera is operated by the Metavision SDK. The SDK can be installed by 
 
 ## Hardware Prototype Configuration
 
+### Event camera bias tuning
+
+- [Bias tuning](https://support.prophesee.ai/portal/en/kb/prophesee-1/technical-application-notes/bias-tuning)
+
+
 ### Event camera and Arduino connection
 
 Connection pin assignment:
