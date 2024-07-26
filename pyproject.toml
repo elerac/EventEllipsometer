@@ -12,7 +12,7 @@ dependencies = [
     "polanalyser>=3.0.0",
     "nanobind==2.0",
     "tqdm>=4.64.1",
-    "torch==2.3.1+cpu",
+    "torch>=2.4.0",
     "typing-extensions>=4.9.0",
     "numpy>=1.26.3",
     "ipykernel>=6.29.5",
