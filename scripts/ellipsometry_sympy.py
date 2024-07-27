@@ -1,123 +1,211 @@
 from sympy import *
 import polanalyser.sympy as pas
+import black
+
+
+def decompose_coefficients(expr: Basic, M: Matrix = pas.mueller()) -> list:
+    """Decompose coefficients of expression by Mueller matrix"""
+    coffs = []
+    for j in range(4):
+        for i in range(4):
+            if M[j, i] not in expr.free_symbols:
+                coff = 0
+            else:
+                coff = Poly(expr, M[j, i]).coeffs()[0]
+
+            coffs.append(coff)
+
+    return coffs
+
+
+def extract_unique_symbols(expr: Expr) -> dict:
+    # Get all possible terms
+    possible_terms = []
+    for term_add in expr.as_ordered_terms():
+        if not term_add.is_Mul:
+            term = term_add
+            # is it has ** remove it
+            if term.is_Pow:
+                term = term.base
+
+            possible_terms.append(term)
+            continue
+        else:
+            # Decompose by * operator
+            for term in term_add.as_ordered_factors():
+                if term.is_Pow:
+                    term = term.base
+                possible_terms.append(term)
+
+    # Replace duplicated expression by new symbol
+    new_symbols = {}
+    for term in possible_terms:
+        if term.is_number:
+            continue
+
+        # Convert term to string and replace some characters
+        term_str = str(term)
+        term_str = term_str.replace("(", "")
+        term_str = term_str.replace(")", "")
+        term_str = term_str.replace("*", "mul")
+        term_str = term_str.replace("/", "div")
+        term_str = term_str.replace("+", "add")
+        term_str = term_str.replace("-", "sub")
+        term_str = term_str.replace(" ", "")
+
+        # if symbol already exist, skip
+        if term_str in new_symbols.keys():
+            continue
+
+        new_symbols[term_str] = term
+
+    return new_symbols
 
 
 def main():
-    theta = Symbol("theta", real=True)
-
     M = pas.mueller()
-    print(M)
+    theta = Symbol("theta", real=True)
+    delta = Symbol("delta", real=True)
+    phi1 = Symbol("phi1", real=True)
+    phi2 = Symbol("phi2", real=True)
+    delta = 2 * pi * 0.25
 
-    M_obs = pas.polarizer(0) @ pas.qwp(5 * theta) @ M @ pas.qwp(theta) @ pas.polarizer(0)
+    # phi1 = 0
+    # phi2 = 0
+
+    # Ellipsometry model
+    M_obs = pas.polarizer(0) @ pas.retarder(delta, 5 * theta + phi2) @ M @ pas.retarder(delta, theta + phi1) @ pas.polarizer(0)
     M_obs_00 = M_obs[0, 0]
-    # print(M_obs_00)
 
-    # for j in range(4):
-    #     for i in range(4):
-    #         if M[j, i] not in M_obs_00.free_symbols:
-    #             coff = 0
-    #         else:
-    #             coff = Poly(M_obs_00, M[j, i]).coeffs()[0]
+    # Get derivative of ln(M_obs_00) by theta
+    diff_ln_M_obs_00 = diff(ln(M_obs_00), theta)
+    diff_ln_M_obs_00 = factor(expand((diff_ln_M_obs_00)))
 
-    #         print(f"m{j}{i}: {coff}")
+    # Separate by numerator and denominator
+    numenator, denominator = fraction(diff_ln_M_obs_00)
 
-    # exit()
+    # Extract unique symbols
+    numenator_new_symbols = extract_unique_symbols(numenator)
+    denominator_new_symbols = extract_unique_symbols(denominator)
+    new_symbols = {**numenator_new_symbols, **denominator_new_symbols}
+    # Remove Mueller matrix
+    for mij in M.free_symbols:
+        new_symbols.pop(str(mij), None)
 
-    # log_M_obs_00 = ln(M_obs_00)
+    print("New symbols")
+    print(new_symbols)
 
-    # # Derivative of log_M_obs_00
-    # dlog_M_obs_00 = diff(log_M_obs_00, theta)
+    # Replace by unique symbols
+    for key, value in new_symbols.items():
+        numenator = numenator.subs(value, Symbol(key, real=True))
+        denominator = denominator.subs(value, Symbol(key, real=True))
 
-    # final = factor(expand(simplify(dlog_M_obs_00)))
-    # print(final)
-    # print("--------------------")
-    # # print(latex(final))
+    # Decompose coefficients and print
+    coffs_numenator = decompose_coefficients(numenator)
+    coffs_denominator = decompose_coefficients(denominator)
+    print("Numenator")
+    for i, coff in enumerate(coffs_numenator):
+        print(f"m{i//4}{i%4}: {coff}")
 
-    # # Separate by numerator and denominator
-    # num, den = fraction(final)
+    print("Denominator")
+    for i, coff in enumerate(coffs_denominator):
+        print(f"m{i//4}{i%4}: {coff}")
 
-    m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33 = M
+    # Generate python functions
+    py_funcs_str = ""
+    py_funcs_str += "import numpy as np\n"
+    py_funcs_str += "\n"
 
-    num = (
-        -8.0 * m01 * sin(2 * theta) * cos(2 * theta)
-        - 4.0 * m02 * sin(2 * theta) ** 2
-        + 4.0 * m02 * cos(2 * theta) ** 2
-        + 4.0 * m03 * cos(2 * theta)
-        - 20.0 * m10 * sin(20 * theta)
-        - 8.0 * m11 * sin(2 * theta) * cos(2 * theta) * cos(10 * theta) ** 2
-        - 20.0 * m11 * sin(20 * theta) * cos(2 * theta) ** 2
-        - 4.0 * m12 * sin(2 * theta) ** 2 * cos(10 * theta) ** 2
-        - 20.0 * m12 * sin(2 * theta) * sin(20 * theta) * cos(2 * theta)
-        + 4.0 * m12 * cos(2 * theta) ** 2 * cos(10 * theta) ** 2
-        - 20.0 * m13 * sin(2 * theta) * sin(20 * theta)
-        + 4.0 * m13 * cos(2 * theta) * cos(10 * theta) ** 2
-        - 20.0 * m20 * sin(10 * theta) ** 2
-        + 20.0 * m20 * cos(10 * theta) ** 2
-        - 4.0 * m21 * sin(2 * theta) * sin(20 * theta) * cos(2 * theta)
-        - 20.0 * m21 * sin(10 * theta) ** 2 * cos(2 * theta) ** 2
-        + 20.0 * m21 * cos(2 * theta) ** 2 * cos(10 * theta) ** 2
-        - 2.0 * m22 * sin(2 * theta) ** 2 * sin(20 * theta)
-        - 20.0 * m22 * sin(2 * theta) * sin(10 * theta) ** 2 * cos(2 * theta)
-        + 20.0 * m22 * sin(2 * theta) * cos(2 * theta) * cos(10 * theta) ** 2
-        + 2.0 * m22 * sin(20 * theta) * cos(2 * theta) ** 2
-        - 20.0 * m23 * sin(2 * theta) * sin(10 * theta) ** 2
-        + 20.0 * m23 * sin(2 * theta) * cos(10 * theta) ** 2
-        + 2.0 * m23 * sin(20 * theta) * cos(2 * theta)
-        - 20.0 * m30 * cos(10 * theta)
-        + 8.0 * m31 * sin(2 * theta) * sin(10 * theta) * cos(2 * theta)
-        - 20.0 * m31 * cos(2 * theta) ** 2 * cos(10 * theta)
-        + 4.0 * m32 * sin(2 * theta) ** 2 * sin(10 * theta)
-        - 20.0 * m32 * sin(2 * theta) * cos(2 * theta) * cos(10 * theta)
-        - 4.0 * m32 * sin(10 * theta) * cos(2 * theta) ** 2
-        - 20.0 * m33 * sin(2 * theta) * cos(10 * theta)
-        - 4.0 * m33 * sin(10 * theta) * cos(2 * theta)
-    )
+    py_funcs_str += "def diff_ln_M_obs_00(M, theta, phi1, phi2):\n"
+    py_funcs_str += "    m00, m01, m02, m03 = M[0]\n"
+    py_funcs_str += "    m10, m11, m12, m13 = M[1]\n"
+    py_funcs_str += "    m20, m21, m22, m23 = M[2]\n"
+    py_funcs_str += "    m30, m31, m32, m33 = M[3]\n"
+    py_funcs_str += "\n"
+    py_funcs_str += "    sin = np.sin\n"
+    py_funcs_str += "    cos = np.cos\n"
+    py_funcs_str += "    pi = np.pi\n"
+    py_funcs_str += "\n"
+    py_funcs_str += "    return "
+    py_funcs_str += str(diff_ln_M_obs_00)
+    py_funcs_str += "\n"
 
-    den = 2 * m00 + 2 * m01 * cos(2 * theta) ** 2 + 2 * m02 * sin(2 * theta) * cos(2 * theta) + 2 * m03 * sin(2 * theta) + 2 * m10 * cos(10 * theta) ** 2 + 2 * m11 * cos(2 * theta) ** 2 * cos(10 * theta) ** 2 + 2 * m12 * sin(2 * theta) * cos(2 * theta) * cos(10 * theta) ** 2 + 2 * m13 * sin(2 * theta) * cos(10 * theta) ** 2 + m20 * sin(20 * theta) + m21 * sin(20 * theta) * cos(2 * theta) ** 2 + m22 * sin(2 * theta) * sin(20 * theta) * cos(2 * theta) + m23 * sin(2 * theta) * sin(20 * theta) - 2 * m30 * sin(10 * theta) - 2 * m31 * sin(10 * theta) * cos(2 * theta) ** 2 - 2 * m32 * sin(2 * theta) * sin(10 * theta) * cos(2 * theta) - 2 * m33 * sin(2 * theta) * sin(10 * theta)
+    py_funcs_str += "def calcNumenatorDenominatorCoffs(theta, phi1, phi2):\n"
+    py_funcs_str += "    sin = np.sin\n"
+    py_funcs_str += "    cos = np.cos\n"
+    py_funcs_str += "\n"
+    # expand new symbols
+    for key, value in new_symbols.items():
+        py_funcs_str += f"    {key} = {value}\n"
+    py_funcs_str += "\n"
+    py_funcs_str += "    numenator_coffs = np.empty((len(theta), 16), dtype=theta.dtype)\n"
+    py_funcs_str += "    denominator_coffs = np.empty((len(theta), 16), dtype=theta.dtype)\n"
+    py_funcs_str += "\n"
+    for i, coff in enumerate(coffs_numenator):
+        py_funcs_str += f"    numenator_coffs[:, {i}] = {coff}\n"
+    py_funcs_str += "\n"
+    for i, coff in enumerate(coffs_denominator):
+        py_funcs_str += f"    denominator_coffs[:, {i}] = {coff}\n"
+    py_funcs_str += "\n"
+    py_funcs_str += "    return numenator_coffs, denominator_coffs\n"
+    py_funcs_str += "\n"
 
-    print(num)
-    print("--------------------")
-    print(den)
-    print("--------------------")
+    with open("equation.py", "w") as f:
+        py_funcs_str = black.format_str(py_funcs_str, mode=black.Mode(line_length=1000000))
+        f.write(py_funcs_str)
 
-    # Get cofficients
-    print("numerator")
-    for j in range(4):
-        for i in range(4):
-            if M[j, i] not in num.free_symbols:
-                coff = 0
-            else:
-                coff = Poly(num, M[j, i]).coeffs()[0]
+    # Generate cpp functions
+    cpp_funcs_str = ""
+    cpp_funcs_str += "#include <nanobind/nanobind.h>\n"
+    cpp_funcs_str += "#include <nanobind/eigen/dense.h>\n"
+    cpp_funcs_str += "\n"
 
-            if i == 0 and j == 0:
-                print("[", end="")
+    cpp_funcs_str += "std::pair<Eigen::Matrix<float, Eigen::Dynamic, 16>, Eigen::Matrix<float, Eigen::Dynamic, 16>>\n"
+    cpp_funcs_str += "calcNumenatorDenominatorCoffs(const Eigen::VectorXf &theta, float phi1, float phi2)\n"
+    cpp_funcs_str += "{\n"
+    cpp_funcs_str += "    Eigen::Matrix<float, Eigen::Dynamic, 16> numenator_coffs(theta.size(), 16);\n"
+    cpp_funcs_str += "    Eigen::Matrix<float, Eigen::Dynamic, 16> denominator_coffs(theta.size(), 16);\n"
+    cpp_funcs_str += "\n"
+    for key, value in new_symbols.items():
+        # Replace sin and cos by array version for Eigen
+        # sin(2 * phi1 + 2 * theta) -> (2 * phi1 + 2 * theta).array().sin()
+        has_sin = str(value)[:3] == "sin"
+        has_cos = str(value)[:3] == "cos"
+        value = str(value).replace("sin", "").replace("cos", "")
+        if has_sin and not has_cos:
+            eq = f"{key} = {value}.array().sin()"
+        elif has_cos and not has_sin:
+            eq = f"{key} = {value}.array().cos()"
+        else:
+            raise
+        eq = black.format_str(eq, mode=black.Mode(line_length=1000000))
+        eq = eq.replace("\n", "")
+        cpp_funcs_str += f"    const auto {eq};\n"
+    cpp_funcs_str += "\n"
+    for i, coff in enumerate(coffs_numenator):
+        # Replace **2 by .square()
+        if isinstance(coff, Expr):
+            coff = str(coff).replace("**2", ".square()")
 
-            print(f"{coff}", end="")
+        eq = f"numenator_coffs.col({i}) = {coff}"
+        eq = black.format_str(eq, mode=black.Mode(line_length=1000000))
+        eq = eq.replace("\n", "")
+        cpp_funcs_str += f"    {eq};\n"
+    cpp_funcs_str += "\n"
+    for i, coff in enumerate(coffs_denominator):
+        # Replace **2 by .square()
+        if isinstance(coff, Expr):
+            coff = str(coff).replace("**2", ".square()")
+        eq = f"denominator_coffs.col({i}) = {coff}"
+        eq = black.format_str(eq, mode=black.Mode(line_length=1000000))
+        eq = eq.replace("\n", "")
+        cpp_funcs_str += f"    {eq};\n"
+    cpp_funcs_str += "\n"
+    cpp_funcs_str += "    return {numenator_coffs, denominator_coffs};\n"
+    cpp_funcs_str += "}\n"
 
-            if i == 3 and j == 3:
-                print("]")
-            else:
-                print(",", end="")
-
-            # print(f"m{j}{i}: {coff}")
-
-    print("denominator")
-    for j in range(4):
-        for i in range(4):
-            if M[j, i] not in den.free_symbols:
-                coff = 0
-            else:
-                coff = Poly(den, M[j, i]).coeffs()[0]
-
-            if i == 0 and j == 0:
-                print("[", end="")
-            print(f"{coff}", end="")
-            if i == 3 and j == 3:
-                print("]")
-            else:
-                print(",", end="")
-
-            # print(f"m{j}{i}: {coff}")
+    with open("equation.cpp", "w") as f:
+        f.write(cpp_funcs_str)
 
 
 if __name__ == "__main__":
