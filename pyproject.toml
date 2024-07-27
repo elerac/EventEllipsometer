@@ -16,6 +16,7 @@ dependencies = [
     "typing-extensions>=4.9.0",
     "numpy>=1.26.3",
     "ipykernel>=6.29.5",
+    "black>=24.4.2",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
