@@ -9,6 +9,10 @@ wheels/
 # venv
 .venv
 
+# lock 
+requirements.lock
+requirements-dev.lock
+
 # cpp generated files
 *.pyd
 *.exp
