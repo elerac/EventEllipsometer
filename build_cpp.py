@@ -23,6 +23,7 @@ def main():
     ret2 = subprocess.run(["cmake", "--build", "build", "--config", args.config], shell=True)
     if ret1.returncode != 0 or ret2.returncode != 0:
         raise Exception("Failed to build nanobind module")
+    green_print("Finished building nanobind module")
 
     # In windows, copy build/Debug to src/eventellipsometry
     # and rename Debug to _eventellipsometry_impl
@@ -38,6 +39,8 @@ def main():
     with open("src/eventellipsometry/_eventellipsometry_impl/__init__.py", "w") as f:
         f.write("from ._eventellipsometry_impl import *")
 
+    green_print(f"Moved {src} to {dst}, and generated __init__.py")
+
     # Generate pyi file
     import eventellipsometry as ee
 
@@ -47,6 +50,10 @@ def main():
     pyi = sg.get()
     with open("src/eventellipsometry/_eventellipsometry_impl/__init__.pyi", "w") as f:
         f.write(pyi)
+
+    green_print("Generated pyi file")
+
+    green_print("Successfully built nanobind module")
 
 
 if __name__ == "__main__":
