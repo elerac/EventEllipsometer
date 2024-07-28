@@ -1,21 +1,32 @@
+import argparse
 import subprocess
 import os
 import shutil
 from nanobind.stubgen import StubGen
 
 
+def green_print(msg):
+    print("\033[92m" + msg + "\033[0m")
+
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, default="Release", help="Configuration type")
+    args = parser.parse_args()
+
     # Build nanobind module
     ret1 = subprocess.run(["cmake", "-S", ".", "-B", "build"], shell=True)
-    ret2 = subprocess.run(["cmake", "--build", "build"], shell=True)
+    ret2 = subprocess.run(["cmake", "--build", "build", "--config", args.config], shell=True)
     if ret1.returncode != 0 or ret2.returncode != 0:
         raise Exception("Failed to build nanobind module")
 
     # In windows, copy build/Debug to src/eventellipsometry
     # and rename Debug to _eventellipsometry_impl
     if os.name == "nt":
-        shutil.rmtree("src/eventellipsometry/_eventellipsometry_impl", ignore_errors=True)
-        shutil.copytree("build/Debug", "src/eventellipsometry/_eventellipsometry_impl")
+        src = f"build/{args.config}"
+        dst = "src/eventellipsometry/_eventellipsometry_impl"
+        shutil.rmtree(dst, ignore_errors=True)
+        shutil.copytree(src, dst)
     else:
         raise
 
