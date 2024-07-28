@@ -7,14 +7,17 @@
 #include <nanobind/eigen/dense.h>
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/vector.h>
+#include <nanobind/stl/pair.h>
 
 #include <omp.h>
 #include <Eigen/SVD>
 
+#include "equations.h"
+
 namespace nb = nanobind;
 using namespace nb::literals;
 
-int add(int a, int b) { return a + b+1 ; }
+int add(int a, int b) { return a + b; }
 
 // Solve Ax = 0
 inline Eigen::VectorXf svd(const Eigen::MatrixXf &A)
@@ -250,9 +253,16 @@ std::vector<Eigen::Vector<float, 16>> fit_batch(const std::vector<nb::DRef<Eigen
     return result;
 }
 
+std::pair<Eigen::Matrix<float, Eigen::Dynamic, 16>, Eigen::Matrix<float, Eigen::Dynamic, 16>>
+calcNumenatorDenominatorCoffs_bind(const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
+{
+    return calcNumenatorDenominatorCoffs(theta, phi1, phi2);
+}
+
 NB_MODULE(_eventellipsometry_impl, m)
 {
     m.def("add", &add);
     m.def("fit_batch", &fit_batch, nb::arg("theta").noconvert(), nb::arg("time_diff").noconvert(), nb::arg("max_iter") = 50, nb::arg("eps") = 1e-6, nb::arg("tol") = 1e-3);
     m.def("fit", &fit_bind, nb::arg("theta").noconvert(), nb::arg("time_diff").noconvert(), nb::arg("max_iter") = 50, nb::arg("eps") = 1e-6, nb::arg("tol") = 1e-3, nb::arg("debug") = false);
+    m.def("calcNumenatorDenominatorCoffs", &calcNumenatorDenominatorCoffs_bind, nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"));
 }
