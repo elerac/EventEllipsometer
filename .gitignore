@@ -9,6 +9,9 @@ wheels/
 # venv
 .venv
 
+# .vscode
+.vscode/
+
 # lock 
 requirements.lock
 requirements-dev.lock
