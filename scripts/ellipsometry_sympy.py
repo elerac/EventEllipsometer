@@ -1,4 +1,6 @@
 from sympy import *
+from sympy.codegen.rewriting import create_expand_pow_optimization
+from sympy.simplify.cse_main import cse
 import polanalyser.sympy as pas
 import black
 
@@ -9,7 +11,7 @@ def decompose_coefficients(expr: Basic, M: Matrix = pas.mueller()) -> list:
     for j in range(4):
         for i in range(4):
             if M[j, i] not in expr.free_symbols:
-                coff = 0.0
+                coff = S(0.0)
             else:
                 coff = Poly(expr, M[j, i]).coeffs()[0]
 
@@ -97,8 +99,9 @@ def main():
 
     # Replace by unique symbols
     for key, value in new_symbols.items():
-        numenator = numenator.subs(value, Symbol(key, real=True))
-        denominator = denominator.subs(value, Symbol(key, real=True))
+        new_symbol = Symbol(key, real=True)
+        numenator = numenator.subs(value, new_symbol)
+        denominator = denominator.subs(value, new_symbol)
 
     # Decompose coefficients and print
     coffs_numenator = decompose_coefficients(numenator)
@@ -154,67 +157,70 @@ def main():
         py_funcs_str = black.format_str(py_funcs_str, mode=black.Mode(line_length=1000000))
         f.write(py_funcs_str)
 
+    # Generate code with sympy codegen
+    replacements, reduced_expressions = cse(coffs_numenator + coffs_denominator, symbols=symbols("tmp0:20"))
+    opt = create_expand_pow_optimization(limit=4)
+
     # Generate cpp functions
     cpp_funcs_str = ""
-    cpp_funcs_str += "#include <nanobind/nanobind.h>\n"
-    cpp_funcs_str += "#include <nanobind/eigen/dense.h>\n"
+    cpp_funcs_str += "#include <utility>\n"
+    cpp_funcs_str += "#include <Eigen/Core>\n"
     cpp_funcs_str += "\n"
 
     cpp_funcs_str += "std::pair<Eigen::Matrix<float, Eigen::Dynamic, 16>, Eigen::Matrix<float, Eigen::Dynamic, 16>>\n"
-    cpp_funcs_str += "calcNumenatorDenominatorCoffs(const Eigen::VectorXf &theta, float _phi1, float _phi2)\n"
+    cpp_funcs_str += "calcNumenatorDenominatorCoffs(const Eigen::VectorXf &thetaVector, float phi1, float phi2)\n"
     cpp_funcs_str += "{\n"
-    cpp_funcs_str += "    Eigen::Matrix<float, Eigen::Dynamic, 16> numenator_coffs(theta.size(), 16);\n"
-    cpp_funcs_str += "    Eigen::Matrix<float, Eigen::Dynamic, 16> denominator_coffs(theta.size(), 16);\n"
+    cpp_funcs_str += "    size_t size = thetaVector.size();\n"
+    cpp_funcs_str += "    Eigen::Matrix<float, Eigen::Dynamic, 16> numenator_coffs(size, 16);\n"
+    cpp_funcs_str += "    Eigen::Matrix<float, Eigen::Dynamic, 16> denominator_coffs(size, 16);\n"
     cpp_funcs_str += "\n"
-    cpp_funcs_str += "    const auto phi1 = Eigen::VectorXf::Constant(theta.size(), _phi1);\n"
-    cpp_funcs_str += "    const auto phi2 = Eigen::VectorXf::Constant(theta.size(), _phi2);\n"
+    # # in for loop
+    cpp_funcs_str += "    for (size_t i = 0; i < size; i++)\n"
+    cpp_funcs_str += "    {\n"
+    cpp_funcs_str += "        float theta = thetaVector(i);\n"
     cpp_funcs_str += "\n"
+    # expand new symbols sin, cos
     for key, value in new_symbols.items():
-        # Replace sin and cos by array version for Eigen
-        # sin(2 * phi1 + 2 * theta) -> (2 * phi1 + 2 * theta).array().sin()
-        has_sin = str(value)[:3] == "sin"
-        has_cos = str(value)[:3] == "cos"
-        value = str(value).replace("sin", "").replace("cos", "")
-        if has_sin and not has_cos:
-            eq = f"{key} = {value}.array().sin()"
-        elif has_cos and not has_sin:
-            eq = f"{key} = {value}.array().cos()"
-        else:
-            raise
-        eq = black.format_str(eq, mode=black.Mode(line_length=1000000))
+        eq = black.format_str(f"{ccode(opt(value))}", mode=black.Mode(line_length=1000000))
         eq = eq.replace("\n", "")
-        cpp_funcs_str += f"    const auto {eq};\n"
+        cpp_funcs_str += f"        float {key} = {eq};\n"
     cpp_funcs_str += "\n"
-    for i, coff in enumerate(coffs_numenator):
-        try:
-            num = float(coff)
-            cpp_funcs_str += f"    numenator_coffs.col({i}) = Eigen::VectorXf::Constant(theta.size(), {num});\n"
-        except:
-            # Replace **2 by .square()
-            coff = str(coff).replace("**2", ".square()")
-            eq = f"numenator_coffs.col({i}) = {coff}"
-            eq = black.format_str(eq, mode=black.Mode(line_length=1000000))
-            eq = eq.replace("\n", "")
-            cpp_funcs_str += f"    {eq};\n"
-
+    # with reduce symbols
+    # tmp
+    for key, value in replacements:
+        eq = black.format_str(f"{ccode(opt(value))}", mode=black.Mode(line_length=1000000))
+        eq = eq.replace("\n", "")
+        cpp_funcs_str += f"        float {ccode(key)} = {eq};\n"
     cpp_funcs_str += "\n"
-    for i, coff in enumerate(coffs_denominator):
-        try:
-            num = float(coff)
-            cpp_funcs_str += f"    denominator_coffs.col({i}) = Eigen::VectorXf::Constant(theta.size(), {num});\n"
-        except:
-            # Replace **2 by .square()
-            coff = str(coff).replace("**2", ".square()")
-            eq = f"denominator_coffs.col({i}) = {coff}"
-            eq = black.format_str(eq, mode=black.Mode(line_length=1000000))
-            eq = eq.replace("\n", "")
-            cpp_funcs_str += f"    {eq};\n"
+    # numenator
+    for i, coff in enumerate(reduced_expressions[: len(coffs_numenator)]):
+        eq = black.format_str(f"{ccode(opt(coff))}", mode=black.Mode(line_length=1000000))
+        eq = eq.replace("\n", "")
+        cpp_funcs_str += f"        numenator_coffs(i, {i}) = {eq};\n"
+    cpp_funcs_str += "\n"
+    # denominator
+    for i, coff in enumerate(reduced_expressions[len(coffs_numenator) :]):
+        eq = black.format_str(f"{ccode(opt(coff))}", mode=black.Mode(line_length=1000000))
+        eq = eq.replace("\n", "")
+        cpp_funcs_str += f"        denominator_coffs(i, {i}) = {eq};\n"
+    cpp_funcs_str += "    }\n"
     cpp_funcs_str += "\n"
     cpp_funcs_str += "    return {numenator_coffs, denominator_coffs};\n"
     cpp_funcs_str += "}\n"
 
-    with open("equations.h", "w") as f:
+    with open("src/equations.cpp", "w") as f:
         f.write(cpp_funcs_str)
+
+    cpp_funcs_str_header = ""
+    cpp_funcs_str_header += "#pragma once\n"
+    cpp_funcs_str_header += "#include <utility>\n"
+    cpp_funcs_str_header += "#include <Eigen/Core>\n"
+    cpp_funcs_str_header += "\n"
+    cpp_funcs_str_header += "std::pair<Eigen::Matrix<float, Eigen::Dynamic, 16>, Eigen::Matrix<float, Eigen::Dynamic, 16>>\n"
+    cpp_funcs_str_header += "calcNumenatorDenominatorCoffs(const Eigen::VectorXf &thetaVector, float phi1, float phi2);\n"
+
+    with open("src/equations.h", "w") as f:
+        f.write(cpp_funcs_str_header)
 
 
 if __name__ == "__main__":
