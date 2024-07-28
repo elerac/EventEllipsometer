@@ -15,6 +15,10 @@ def main():
     args = parser.parse_args()
 
     # Build nanobind module
+    # Remove build directory
+    shutil.rmtree("build", ignore_errors=True)
+
+    # Run cmake and build
     ret1 = subprocess.run(["cmake", "-S", ".", "-B", "build"], shell=True)
     ret2 = subprocess.run(["cmake", "--build", "build", "--config", args.config], shell=True)
     if ret1.returncode != 0 or ret2.returncode != 0:
