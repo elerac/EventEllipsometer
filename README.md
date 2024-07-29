@@ -20,7 +20,11 @@ The event camera is operated by the Metavision SDK. The SDK can be installed by 
 
 ### Event camera bias tuning
 
-- [Bias tuning](https://support.prophesee.ai/portal/en/kb/prophesee-1/technical-application-notes/bias-tuning)
+General guidelines for bias tuning:
+- Refractory period should be small. (--bias_refr 235)
+- High-frequency events should be recorded. (--bias_fo 55)
+
+You can also refer to the following [officical page for bias tuning](https://docs.prophesee.ai/stable/hw/manuals/biases.html) for more information.
 
 
 ### Event camera and Arduino connection
