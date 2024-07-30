@@ -167,7 +167,7 @@ def record(
     bias_refr = device.get_i_ll_biases().get("bias_refr")
     with open(filepath_bias, "w") as f:
         f.write(f"{bias_diff}    % bias_diff\n")
-        f.write(f"{bias_diff_on}    % bias_diff\n")
+        f.write(f"{bias_diff_on}    % bias_diff_on\n")
         f.write(f"{bias_diff_off}    % bias_diff_off\n")
         f.write(f"{bias_fo}    % bias_fo\n")
         f.write(f"{bias_hpf}    % bias_hpf\n")
