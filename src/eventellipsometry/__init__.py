@@ -1,6 +1,7 @@
 from .event_record import *
 from .event_io import *
 from .event_structure import FastEventAccess
+from .utils_mueller import *
 
 import importlib.util
 import warnings
