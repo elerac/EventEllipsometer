@@ -13,19 +13,23 @@ When building the extension, Eigen and OpenMP are required.
 
 ### Event Camera Operation
 
-The event camera is operated by the Metavision SDK. The SDK can be installed by following the instruction in the [Metavision SDK](https://docs.prophesee.ai/stable/index.html). 
+The event camera is operated by the Metavision SDK. The SDK can be installed by following the instruction in the [Metavision SDK](https://docs.prophesee.ai/stable/index.html).
 
+### Hardware Development
+
+- [Arduino IDE](https://www.arduino.cc/en/software)
+- [WaveForms (for Analog Discovery 3)](https://reference.digilentinc.com/reference/software/waveforms/waveforms-3/start)
 
 ## Hardware Prototype Configuration
 
 ### Event camera bias tuning
 
 General guidelines for bias tuning:
+
 - Refractory period should be small. (--bias_refr 235)
 - High-frequency events should be recorded. (--bias_fo 55)
 
 You can also refer to the following [officical page for bias tuning](https://docs.prophesee.ai/stable/hw/manuals/biases.html) for more information.
-
 
 ### Event camera and Arduino connection
 
