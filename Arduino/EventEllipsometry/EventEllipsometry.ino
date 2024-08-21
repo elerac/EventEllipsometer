@@ -1,6 +1,7 @@
 #include <PID_v1.h>
 #define DEBUG 0
 #define DEBUG_LITE 1
+#define PARAM_TUNE 0
 
 // Baud rate
 unsigned long baudRate = 115200;
@@ -13,12 +14,12 @@ pin_size_t pinOut_x5 = 6;
 pin_size_t pinOut_trig = 12;
 
 // PID parameters
-double setpoint_x1 = 24.0;
+double setpoint_x1 = 15.0;
 double setpoint_x5 = setpoint_x1 * 5.0;
 double input_x1, output_x1;
 double input_x5, output_x5;
-PID myPID_x1(&input_x1, &output_x1, &setpoint_x1, 100, 150, 0.5, DIRECT);
-PID myPID_x5(&input_x5, &output_x5, &setpoint_x5, 100, 150, 0.5, DIRECT);
+PID myPID_x1(&input_x1, &output_x1, &setpoint_x1, 100, 170, 0.2, DIRECT);
+PID myPID_x5(&input_x5, &output_x5, &setpoint_x5, 100, 170, 0.2, DIRECT);
 
 // Initialize
 unsigned long period_x1 = 1000000000; // [us/rot]
@@ -98,7 +99,7 @@ void setup()
     setpoint_x1 = setpoint_x1 * coff;
     setpoint_x5 = setpoint_x5 * coff;
 
-#if DEBUG || DEBUG_LITE
+#if DEBUG || DEBUG_LITE || PARAM_TUNE
     Serial.begin(baudRate);
 #endif
 }
@@ -122,11 +123,39 @@ void loop()
 
     unsigned long t_end_pid = micros();
 
+#if PARAM_TUNE
+    // Get PID parameters from serial and update
+    // params are separated by comma "Kp, Ki, Kd"
+    if (Serial.available() > 0)
+    {
+        String str = Serial.readString();
+        int idx = str.indexOf(",");
+        if (idx > 0)
+        {
+            double Kp = str.substring(0, idx).toDouble();
+            str.remove(0, idx + 1);
+            idx = str.indexOf(",");
+            if (idx > 0)
+            {
+                double Ki = str.substring(0, idx).toDouble();
+                double Kd = str.substring(idx + 1).toDouble();
+                myPID_x1.SetTunings(Kp, Ki, Kd);
+                myPID_x5.SetTunings(Kp, Ki, Kd);
+            }
+        }
+        // Serial.println("PID parameters updated");
+        // Serial.println(myPID_x1.GetKp());
+        // Serial.println(myPID_x1.GetKi());
+        // Serial.println(myPID_x1.GetKd());
+        // delay(1000);
+    }
+#endif
+
 #if DEBUG || DEBUG_LITE
 #if DEBUG_LITE && !DEBUG
-    Serial.print(freq_x1, 1);
+    Serial.print(freq_x1, 2);
     Serial.print(", ");
-    Serial.print(freq_x5, 1);
+    Serial.print(freq_x5, 2);
     Serial.print(", ");
     Serial.print(output_x1, 0);
     Serial.print(", ");
