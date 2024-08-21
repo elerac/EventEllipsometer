@@ -30,7 +30,8 @@ def main():
     if os.name == "nt":
         src = f"build/{args.config}"
         dst = "src/eventellipsometry/_eventellipsometry_impl"
-        shutil.rmtree(dst, ignore_errors=True)
+        if os.path.exists(dst):
+            shutil.rmtree(dst)
         shutil.copytree(src, dst)
     else:
         raise
