@@ -1,6 +1,7 @@
 #include <utility>
 #include <Eigen/Core>
 
+// Calc numerator and denominator of the rational function
 std::pair<Eigen::Matrix<float, Eigen::Dynamic, 16>, Eigen::Matrix<float, Eigen::Dynamic, 16>>
 calcNumenatorDenominatorCoffs(const Eigen::VectorXf &thetaVector, float phi1, float phi2)
 {
