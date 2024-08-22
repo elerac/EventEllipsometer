@@ -4,6 +4,13 @@ import numpy as np
 import numpy.typing as npt
 from tqdm import trange, tqdm
 
+try:
+    from ._eventellipsometry_impl import cvtEventStrucure
+
+    cpp_available = True
+except ImportError:
+    cpp_available = False
+
 
 class FastEventAccess:
     """Event data structure for fast access to t and p at (x, y) position."""
@@ -11,8 +18,8 @@ class FastEventAccess:
     def __init__(
         self,
         events: Dict[str, Any],
-        t_min: Optional[float] = None,
-        t_max: Optional[float] = None,
+        t_min: Optional[int] = None,
+        t_max: Optional[int] = None,
         preview: bool = False,
     ):
         start_time = time.time()
@@ -44,12 +51,15 @@ class FastEventAccess:
         p = p[sort_idx]
 
         # Append t and p to each (x, y) position
-        num = len(x)
-        self.t_xy_list = [[[] for _ in range(width)] for _ in range(height)]
-        self.p_xy_list = [[[] for _ in range(width)] for _ in range(height)]
-        for xi, yi, ti, pi in tqdm(zip(x, y, t, p), total=num, disable=not preview, desc="Gather t and p (xy)"):
-            self.t_xy_list[yi][xi].append(ti)
-            self.p_xy_list[yi][xi].append(pi)
+        if cpp_available:
+            self.t_xy_list, self.p_xy_list = cvtEventStrucure(x, y, t, p, width, height, t_min, t_max)
+        else:
+            num = len(x)
+            self.t_xy_list = [[[] for _ in range(width)] for _ in range(height)]
+            self.p_xy_list = [[[] for _ in range(width)] for _ in range(height)]
+            for xi, yi, ti, pi in tqdm(zip(x, y, t, p), total=num, disable=not preview, desc="Gather t and p (xy)"):
+                self.t_xy_list[yi][xi].append(ti)
+                self.p_xy_list[yi][xi].append(pi)
 
         # Convert to ndarray
         dtype_t = t.dtype
@@ -64,7 +74,7 @@ class FastEventAccess:
             elapsed_time = time.time() - start_time
             print(f"Elapsed time: {elapsed_time:.2f}s")
 
-    def get(self, ix: int, iy: int, t_min: Optional[float] = None, t_max: Optional[float] = None) -> tuple[npt.NDArray, npt.NDArray]:
+    def get(self, ix: int, iy: int, t_min: Optional[int] = None, t_max: Optional[int] = None) -> tuple[npt.NDArray, npt.NDArray]:
         t_xy = self.t_xy_list[iy][ix]
         p_xy = self.p_xy_list[iy][ix]
 

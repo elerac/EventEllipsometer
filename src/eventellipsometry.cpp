@@ -2,12 +2,14 @@
 #include <chrono>
 #include <utility>
 #include <random>
+#include <optional>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/eigen/dense.h>
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/vector.h>
 #include <nanobind/stl/pair.h>
+#include <nanobind/stl/optional.h>
 
 #include <omp.h>
 #include <Eigen/SVD>
@@ -205,6 +207,73 @@ Eigen::VectorXf fit(const Eigen::VectorXf &theta,
 //     return result;
 // }
 
+auto cvtEventStrucure(
+    nb::ndarray<const uint16_t, nb::ndim<1>, nb::c_contig, nb::device::cpu> x,
+    nb::ndarray<const uint16_t, nb::ndim<1>, nb::c_contig, nb::device::cpu> y,
+    nb::ndarray<const int64_t, nb::ndim<1>, nb::c_contig, nb::device::cpu> t,
+    nb::ndarray<const int16_t, nb::ndim<1>, nb::c_contig, nb::device::cpu> p,
+    int width,
+    int height,
+    std::optional<int64_t> t_min,
+    std::optional<int64_t> t_max)
+{
+    // check size should be same
+    if (x.shape(0) != y.shape(0) || x.shape(0) != t.shape(0) || x.shape(0) != p.shape(0))
+    {
+        throw std::invalid_argument("x, y, t, p should have same size");
+    }
+
+    size_t num = x.shape(0);
+
+    // Initialize image structure
+    std::vector<std::vector<std::vector<int64_t>>> img_t(height, std::vector<std::vector<int64_t>>(width));
+    std::vector<std::vector<std::vector<int16_t>>> img_p(height, std::vector<std::vector<int16_t>>(width));
+    img_t.resize(height);
+    img_p.resize(height);
+    for (size_t i = 0; i < height; ++i)
+    {
+        img_t[i].resize(width);
+        img_p[i].resize(width);
+    }
+
+    bool enable_t_range = t_min.has_value() || t_max.has_value();
+    if (!t_min.has_value() && t_max.has_value())
+    {
+        t_min = 0;
+    }
+    if (!t_max.has_value() && t_min.has_value())
+    {
+        t_max = std::numeric_limits<int64_t>::max();
+    }
+
+    // Fill
+    auto x_v = x.view();
+    auto y_v = y.view();
+    auto t_v = t.view();
+    auto p_v = p.view();
+    for (size_t i = 0; i < num; ++i)
+    {
+        int64_t t_ = t_v(i);
+
+        if (enable_t_range)
+        {
+            if (t_ < t_min || t_ > t_max)
+            {
+                continue;
+            }
+        }
+
+        uint16_t x_ = x_v(i);
+        uint16_t y_ = y_v(i);
+        int16_t p_ = p_v(i);
+
+        img_t[y_][x_].push_back(t_);
+        img_p[y_][x_].push_back(p_);
+    }
+
+    return std::make_pair(img_t, img_p);
+}
+
 NB_MODULE(_eventellipsometry_impl, m)
 {
     m.def("add", &add);
@@ -224,4 +293,5 @@ NB_MODULE(_eventellipsometry_impl, m)
           { return calcNumenatorDenominatorCoffs(theta, phi1, phi2); }, nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"), "Calculate numenator and denominator cofficients");
     m.def("diffLn", [](const nb::DRef<Eigen::Vector<float, 16>> &M, const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
           { return diffLn(M, theta, phi1, phi2); }, nb::arg("M").noconvert(), nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"));
+    m.def("cvtEventStrucure", &cvtEventStrucure, nb::arg("x").noconvert(), nb::arg("y").noconvert(), nb::arg("t").noconvert(), nb::arg("p").noconvert(), nb::arg("width"), nb::arg("height"), nb::arg("t_min") = nb::none(), nb::arg("t_max") = nb::none());
 }
