@@ -22,66 +22,6 @@ using namespace nb::literals;
 
 int add(int a, int b) { return a + b; }
 
-Eigen::VectorXf init(const Eigen::VectorXf &theta, const Eigen::VectorXf &time_diff)
-{
-    auto [pn, pd] = calcNumenatorDenominatorCoffs(theta, 0.0, 0.0);
-
-    Eigen::VectorXf x_final = Eigen::VectorXf::Zero(16);
-    float error_final = std::numeric_limits<float>::max();
-
-    Eigen::Matrix<float, Eigen::Dynamic, 16> A(theta.size(), 16);
-    A = (pn.array() - time_diff.replicate(1, 16).array() * pd.array());
-    x_final = svdSolve(A);
-    Eigen::VectorXf time_diff_pred_ = (pn * x_final).array() / (pd * x_final).array();
-    Eigen::VectorXf r_ = time_diff - time_diff_pred_;
-    error_final = r_.array().abs().mean();
-
-    Eigen::VectorXf x = Eigen::VectorXf::Zero(16);
-    // [[0, 1, 2, 3],
-    //  [4, 5, 6, 7],
-    //  [8, 9, 10, 11],
-    //  [12, 13, 14, 15]]
-    x(0) = 1.0;
-
-    // Random value geneartor
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dis(-1.0, 1.0);
-
-#pragma omp parallel for
-    for (int i = 0; i < 100000; ++i)
-    {
-        x(5) = dis(gen);
-        x(10) = dis(gen);
-        x(15) = dis(gen);
-
-        x(1) = 0.25 * dis(gen);
-        x(2) = 0.25 * dis(gen);
-        x(3) = 0.25 * dis(gen);
-        x(4) = 0.25 * dis(gen);
-        x(6) = 0.25 * dis(gen);
-        x(7) = 0.25 * dis(gen);
-        x(8) = 0.25 * dis(gen);
-        x(9) = 0.25 * dis(gen);
-        x(11) = 0.25 * dis(gen);
-        x(12) = 0.25 * dis(gen);
-        x(13) = 0.25 * dis(gen);
-        x(14) = 0.25 * dis(gen);
-
-        Eigen::VectorXf time_diff_pred = (pn * x).array() / (pd * x).array();
-        Eigen::VectorXf r = time_diff - time_diff_pred;
-        float error = r.array().abs().mean();
-        // float error = r.array().square().mean();
-        if (error < error_final)
-        {
-            x_final = x;
-            error_final = error;
-        }
-    }
-
-    return x_final;
-}
-
 template <bool DEBUG = false>
 Eigen::VectorXf fit(const Eigen::VectorXf &theta,
                     const Eigen::VectorXf &time_diff,
