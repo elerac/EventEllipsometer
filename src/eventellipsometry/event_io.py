@@ -83,7 +83,7 @@ def read_event(filepath: str, filepath_bias: Optional[str] = None) -> Dict[str, 
         data_npz = np.load(filepath)
         data = {k: data_npz[k] for k in data_npz.files}  # Convert to dict
     else:
-        raise ValueError(f"Unsupported file format: {suffix}")
+        raise ValueError(f"Unsupported file format: '{suffix}'")
 
     return data
 
