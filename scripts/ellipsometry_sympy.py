@@ -77,11 +77,30 @@ def main():
 
     # Ellipsometry model
     M_obs = pas.polarizer(0) @ pas.retarder(delta, 5 * theta + phi2) @ M @ pas.retarder(delta, theta + phi1) @ pas.polarizer(0)
+
+    # delta = 2 * pi * 0.29
+    # M_obs += pas.polarizer(0) @ pas.retarder(delta, 5 * theta + phi2) @ M @ pas.retarder(delta, theta + phi1) @ pas.polarizer(0)
+    # delta = 2 * pi * 0.20
+    # M_obs += pas.polarizer(0) @ pas.retarder(delta, 5 * theta + phi2) @ M @ pas.retarder(delta, theta + phi1) @ pas.polarizer(0)
+    # delta = 2 * pi * 0.22
+    # M_obs += pas.polarizer(0) @ pas.retarder(delta, 5 * theta + phi2) @ M @ pas.retarder(delta, theta + phi1) @ pas.polarizer(0)
+    # delta = 2 * pi * 0.26
+    # M_obs += pas.polarizer(0) @ pas.retarder(delta, 5 * theta + phi2) @ M @ pas.retarder(delta, theta + phi1) @ pas.polarizer(0)
+
     M_obs_00 = M_obs[0, 0]
 
     # Get derivative of ln(M_obs_00) by theta
     diff_ln_M_obs_00 = diff(ln(M_obs_00), theta)
     diff_ln_M_obs_00 = factor(expand((diff_ln_M_obs_00)))
+
+    # Get derivative of diff_ln_M_obs_00 by mij
+    for mij in M.free_symbols:
+        diff_ln_M_obs_00_mij = diff(diff_ln_M_obs_00, mij)
+        print(f"d(diff(ln(M_obs_00)), {mij})")
+        print(diff_ln_M_obs_00_mij)
+        print()
+
+    # exit()
 
     # Separate by numerator and denominator
     numenator, denominator = fraction(diff_ln_M_obs_00)
@@ -158,15 +177,18 @@ def main():
         f.write(py_funcs_str)
 
     # Generate code with sympy codegen
-    replacements, reduced_expressions = cse(coffs_numenator + coffs_denominator, symbols=symbols("tmp0:20"))
+    replacements, reduced_expressions = cse(coffs_numenator + coffs_denominator, symbols=symbols("tmp0:200"))
     opt = create_expand_pow_optimization(limit=4)
 
     # Generate cpp functions
     cpp_funcs_str = ""
     cpp_funcs_str += "#include <utility>\n"
     cpp_funcs_str += "#include <Eigen/Core>\n"
+    cpp_funcs_str += "#define _USE_MATH_DEFINES\n"
+    cpp_funcs_str += "#include <math.h>\n"
     cpp_funcs_str += "\n"
 
+    cpp_funcs_str += "// Calc numerator and denominator of the rational function\n"
     cpp_funcs_str += "std::pair<Eigen::Matrix<float, Eigen::Dynamic, 16>, Eigen::Matrix<float, Eigen::Dynamic, 16>>\n"
     cpp_funcs_str += "calcNumenatorDenominatorCoffs(const Eigen::VectorXf &thetaVector, float phi1, float phi2)\n"
     cpp_funcs_str += "{\n"
