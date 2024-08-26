@@ -4,7 +4,7 @@
 
 ### Python Environment
 
-This project is developed with rye for managing the python environment. To construct the python environment, run the `rye sync` command. 
+This project is developed with [rye](https://github.com/astral-sh/rye) for managing the python environment. To construct the python environment, run the `rye sync` command. 
 
 ### C++ Extension
 
