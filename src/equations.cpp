@@ -1,5 +1,7 @@
 #include <utility>
 #include <Eigen/Core>
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 // Calc numerator and denominator of the rational function
 std::pair<Eigen::Matrix<float, Eigen::Dynamic, 16>, Eigen::Matrix<float, Eigen::Dynamic, 16>>
