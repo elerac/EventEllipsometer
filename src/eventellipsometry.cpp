@@ -22,6 +22,13 @@ using namespace nb::literals;
 
 int add(int a, int b) { return a + b; }
 
+float median(const Eigen::VectorXf &v)
+{
+    auto v_ = v;
+    std::sort(v_.data(), v_.data() + v_.size());
+    return v_(v_.size() / 2);
+}
+
 template <bool DEBUG = false>
 Eigen::VectorXf fit(const Eigen::VectorXf &theta,
                     const Eigen::VectorXf &time_diff,
@@ -45,11 +52,14 @@ Eigen::VectorXf fit(const Eigen::VectorXf &theta,
     Eigen::Matrix<float, Eigen::Dynamic, 16> A(num, 16);
     A = (pn.array() - time_diff.replicate(1, 16).array() * pd.array());
 
+    Eigen::Matrix<float, Eigen::Dynamic, 16> Ainit = A;
+
     // Weight by time_diff
     Eigen::VectorXf inv_time_diff = 1.0f / time_diff.array().abs();
     for (int i = 0; i < 16; ++i)
     {
         A.col(i) = A.col(i).array() * inv_time_diff.array();
+        // Ainit.col(i) = Ainit.col(i).array() * inv_time_diff.array();
     }
 
     // Initial guess
@@ -59,35 +69,28 @@ Eigen::VectorXf fit(const Eigen::VectorXf &theta,
     // IRLS loop
     Eigen::Matrix<float, Eigen::Dynamic, 16> Aw(num, 16);
     float error_prev = std::numeric_limits<float>::max();
+    float error_best = std::numeric_limits<float>::max();
+    Eigen::Vector<float, 16> x_best = x;
     for (int i_loop = 0; i_loop < max_iter; ++i_loop)
     {
         // x should be between -1 and 1
-        x = x.cwiseMax(-1.0).cwiseMin(1.0);
-
-        // float length = x(1) * x(1) + x(2) * x(2) + x(3) * x(3) + x(4) * x(4);
-        // if (length > 1.0)
-        // {
-        //     length = std::sqrt(length);
-        //     x(1) /= length;
-        //     x(2) /= length;
-        //     x(3) /= length;
-        // }
-
-        // length = x(5) * x(5) + x(9) * x(9) + x(13) * x(13) + x(15) * x(15);
-        // if (length > 1.0)
-        // {
-        //     length = std::sqrt(length);
-        //     x(5) /= length;
-        //     x(9) /= length;
-        //     x(13) /= length;
-        // }
         // x = x.cwiseMax(-1.0).cwiseMin(1.0);
 
         // Check convergence
         Eigen::VectorXf time_diff_pred = (pn * x).array() / (pd * x).array();
         Eigen::VectorXf r = time_diff - time_diff_pred;
         auto r_abs = r.array().abs();
+        // auto r_sq = r.array().square();
         float error = r_abs.mean();
+        if (error < error_best)
+        {
+            error_best = error;
+            x_best = x;
+        }
+
+        float s = median((r.array() - median(r)).abs()) / 0.6745;
+        auto r_abs_scaled = (r_abs / s);
+
         if (std::abs(error_prev - error) < tol)
         {
             break;
@@ -98,7 +101,8 @@ Eigen::VectorXf fit(const Eigen::VectorXf &theta,
         // Eigen::VectorXf w = 1.0 / (r.array().abs() + eps);
 
         // Huber weight
-        const Eigen::VectorXf w = (r_abs < delta).select(1.0, delta / r_abs);
+        // const Eigen::VectorXf w = (r_abs < delta).select(1.0, delta / r_abs);
+        Eigen::VectorXf w = (r_abs_scaled < delta).select(1.0, delta / r_abs_scaled);
 
         for (int i = 0; i < 16; ++i)
         {
@@ -110,22 +114,57 @@ Eigen::VectorXf fit(const Eigen::VectorXf &theta,
         if constexpr (DEBUG)
         {
             std::cout << "iter: " << i_loop << "/" << max_iter << ", error: " << error << std::endl;
+            std::cout << "s: " << s << std::endl;
             auto np = nb::module_::import_("numpy");
             auto plt = nb::module_::import_("matplotlib.pyplot");
             auto theta_np = np.attr("array")(theta);
             auto time_diff_np = np.attr("array")(time_diff);
             auto time_diff_pred_np = np.attr("array")(time_diff_pred);
-            auto w_np = np.attr("array")(w / w.maxCoeff());
+            auto w_np = np.attr("array")(w / (1e-8 + w.maxCoeff()));
             plt.attr("clf")();
+            plt.attr("plot")(theta_np, time_diff_pred_np);
             plt.attr("scatter")(theta_np, time_diff_np, "label"_a = "data");
-            plt.attr("scatter")(theta_np, time_diff_pred_np, "label"_a = "fit", "c"_a = w_np, "cmap"_a = "viridis");
+            plt.attr("scatter")(theta_np, time_diff_pred_np, "label"_a = "fit", "alpha"_a = w_np);
             plt.attr("legend")();
             // plt.attr("pause")(1);
+
+            Eigen::Vector<float, 16> x_ = {1, 0, 0, 0,
+                                           0, 0.99, 0, 0,
+                                           0, 0, -0.99, 0,
+                                           0, 0, 0, -0.99};
+            // Eigen::Vector<float, 16> x_ = {1, -0.99, 0, 0,
+            //                                -0.99, 0.99, 0, 0,
+            //                                0, 0, 0, 0,
+            //                                0, 0, 0, 0};
+            Eigen::VectorXf time_diff_pred_gt = (pn * x_).array() / (pd * x_).array();
+            Eigen::VectorXf r_gt = time_diff - time_diff_pred_gt;
+            float error_gt = r_gt.array().abs().mean();
+
+            std::cout << "error_gt: " << error_gt << std::endl;
+            auto time_diff_pred_gt_np = np.attr("array")(time_diff_pred_gt);
+            plt.attr("plot")(theta_np, time_diff_pred_gt_np, "label"_a = "gt", "linestyle"_a = "--", "color"_a = "tab:green");
+
+            auto cv2 = nb::module_::import_("cv2");
+            auto ee = nb::module_::import_("eventellipsometry");
+
+            // Show Mueller image
+            Eigen::Matrix<float, 4, 4> M;
+            M.row(0) = x.segment(0, 4).transpose();
+            M.row(1) = x.segment(4, 4).transpose();
+            M.row(2) = x.segment(8, 4).transpose();
+            M.row(3) = x.segment(12, 4).transpose();
+            auto M_np = np.attr("array")(M);
+            auto img_M_np = ee.attr("mueller_image")(M_np);
+            cv2.attr("imshow")("img", img_M_np);
+            cv2.attr("moveWindow")("img", 0, 0);
+            cv2.attr("waitKey")(1);
+
             plt.attr("show")();
+            plt.attr("close")();
         }
     }
 
-    return x;
+    return x_best;
 }
 
 // std::vector<Eigen::Vector<float, 16>> fit_batch(const std::vector<nb::DRef<Eigen::VectorXf>> &theta,
