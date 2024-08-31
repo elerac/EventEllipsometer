@@ -97,20 +97,30 @@ def record(
     # ROI
     # https://docs.prophesee.ai/stable/hw/manuals/region_of_interest.html
     if roi is not None:
-        if len(roi) == 4:
+        len_roi = 0
+        if hasattr(roi, "__len__"):
+            len_roi = len(roi)
+        elif isinstance(roi, int):
+            len_roi = 1
+            roi = [roi]
+
+        if len_roi not in [1, 2, 4]:
+            raise ValueError(f"Invalid ROI: {roi}")
+
+        if len_roi == 4:
             x, y, width, height = roi
 
-        if isinstance(roi, int):
-            roi = [roi, roi]
+        if len_roi == 1:
+            roi = [roi[0], roi[0]]
+            len_roi = len(roi)
 
-        if len(roi) == 2:
+        if len_roi == 2:
             width, height = roi
             geometry = device.get_i_geometry()
             sensor_width, sensor_height = geometry.get_width(), geometry.get_height()
             x = (sensor_width - width) // 2
             y = (sensor_height - height) // 2
-        else:
-            raise ValueError(f"Invalid ROI format. roi={roi}")
+
         device.get_i_roi().enable(True)
         device.get_i_roi().set_window(I_ROI.Window(x, y, width, height))
 
