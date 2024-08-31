@@ -1,6 +1,8 @@
 import argparse
 import os
 import datetime
+import time
+import warnings
 from typing import Optional, Tuple, Union
 from pathlib import Path
 from metavision_core.event_io.raw_reader import initiate_device
@@ -15,7 +17,7 @@ def generate_filename_raw() -> Path:
 
 def record(
     filepath: Optional[Union[str, Path]] = None,
-    duration: float = 5.0,
+    duration: Optional[float] = 5.0,
     bias_diff: int = 0,
     bias_diff_on: int = 0,
     bias_diff_off: int = 0,
@@ -23,6 +25,7 @@ def record(
     bias_hpf: int = 0,
     bias_refr: int = 0,
     roi: Optional[list[int]] = None,
+    delta_t: float = 0.05,
     verbose: bool = True,
 ) -> Tuple[str, str]:
     """Record events and save to a file (.raw)
@@ -32,7 +35,7 @@ def record(
     filepath : Optional[str, Path], optional
         Output file path, by default None. If None, the file will be saved in the "recordings" directory with the current timestamp.
     duration : float, optional
-        Duration of recording [s], by default 5.0
+        Duration of recording [s], by default 5.0. If None, the recording will continue until the user stops it.
     bias_diff : int, optional
         bias_diff, by default 0
     bias_diff_on : int, optional
@@ -47,6 +50,8 @@ def record(
         bias_refr, by default 0
     roi : Optional[list[int]], optional
         ROI: (x, y, width, height) or (width, height) or (width,), by default None
+    delta_t : float, optional
+        Time interval [s] to read events, by default 0.05
     verbose : bool, optional
         Print log messages, by default True
 
@@ -65,7 +70,7 @@ def record(
 
     if verbose:
         print(f"{datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} Initializing device... ")
-        print(f"  filepath={filepath}, duration={duration}, bias_diff={bias_diff}, bias_diff_on={bias_diff_on}, bias_diff_off={bias_diff_off}, bias_fo={bias_fo}, bias_hpf={bias_hpf}, bias_refr={bias_refr}, roi={roi} ")
+        print(f"  filepath={filepath}, duration={duration}, bias_diff={bias_diff}, bias_diff_on={bias_diff_on}, bias_diff_off={bias_diff_off}, bias_fo={bias_fo}, bias_hpf={bias_hpf}, bias_refr={bias_refr}, roi={roi}, delta_t={delta_t}")
 
     filepath_bias = Path(filepath_raw).with_suffix(".bias")
 
@@ -76,13 +81,28 @@ def record(
 
     device_config = DeviceConfig()
     device_config.enable_biases_range_check_bypass(True)
-    device = initiate_device("")
+
+    max_retries = 5
+    for i in range(max_retries):
+        try:
+            device = initiate_device("")
+        except OSError as e:
+            if i == (max_retries - 1):
+                raise e
+            warnings.warn(f"Failed to initialize device. Retry {i + 1}/{max_retries}.", stacklevel=2)
+            time.sleep(1)
+            continue
+        break
 
     # ROI
     # https://docs.prophesee.ai/stable/hw/manuals/region_of_interest.html
     if roi is not None:
         if len(roi) == 4:
             x, y, width, height = roi
+
+        if isinstance(roi, int):
+            roi = [roi, roi]
+
         if len(roi) == 2:
             width, height = roi
             geometry = device.get_i_geometry()
@@ -90,7 +110,7 @@ def record(
             x = (sensor_width - width) // 2
             y = (sensor_height - height) // 2
         else:
-            raise ValueError("Invalid ROI format. ")
+            raise ValueError(f"Invalid ROI format. roi={roi}")
         device.get_i_roi().enable(True)
         device.get_i_roi().set_window(I_ROI.Window(x, y, width, height))
 
@@ -114,22 +134,31 @@ def record(
         print(f"{datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} Recording events... ")
 
     max_duration_sec = duration
-    mv_iterator = EventsIterator.from_device(device=device, max_duration=max_duration_sec * 1000000)
+    if max_duration_sec is not None:
+        max_duration = max_duration_sec * 1000000  # [s] -> [us]
+    else:
+        max_duration = None
+    mv_iterator = EventsIterator.from_device(device=device, max_duration=max_duration, delta_t=int(delta_t * 1000000))
     # height, width = mv_iterator.get_size()
 
     # Statistics
-    num_eve_pos = 0
-    num_eve_neg = 0
-    num_trig_pos = 0
-    num_trig_neg = 0
+    num_evs_pos = 0
+    num_evs_neg = 0
+    total_evs_pos = 0
+    total_evs_neg = 0
+    total_trig_pos = 0
+    total_trig_neg = 0
 
     # Read events
+    is_printed = False
     for evs in mv_iterator:
         # Events
         if evs.size != 0:
             p = evs["p"]
-            num_eve_pos += len(p[p == 1])
-            num_eve_neg += len(p[p == 0])
+            num_evs_pos = len(p[p == 1])
+            num_evs_neg = len(p[p == 0])
+            total_evs_pos += num_evs_pos
+            total_evs_neg += num_evs_neg
 
         # Triggers
         triggers = mv_iterator.reader.get_ext_trigger_events()
@@ -137,18 +166,50 @@ def record(
             for trigger in triggers:
                 trig_p, trig_t, _ = trigger
                 if trig_p == 1:
-                    num_trig_pos += 1
+                    total_trig_pos += 1
 
                 if trig_p == 0:
-                    num_trig_neg += 1
+                    total_trig_neg += 1
 
             mv_iterator.reader.clear_ext_trigger_events()
 
         if verbose:
-            print(f"  Events: pos={num_eve_pos}, neg={num_eve_neg}, Triggers: pos={num_trig_pos}, neg={num_trig_neg}", end="\r")
+            if is_printed:
+                # Move cursor up
+                print("\033[F" * 4, end="")
 
-    if verbose:
-        print()
+            columns = os.get_terminal_size().columns
+
+            # Statistics (filled with spaces at the left side)
+            total_evs = total_evs_pos + total_evs_neg
+            percent_total_pos = total_evs_pos / total_evs * 100
+            percent_total_neg = total_evs_neg / total_evs * 100
+            num_evs = num_evs_pos + num_evs_neg
+            percent_num_pos = num_evs_pos / num_evs * 100
+            percent_num_neg = num_evs_neg / num_evs * 100
+            print(f"  Events (total): pos={total_evs_pos} ({percent_total_pos:.1f}%), neg={total_evs_neg} ({percent_total_neg:.1f}%)".ljust(columns))
+            print(f"  Events ({delta_t}s): pos={num_evs_pos} ({percent_num_pos:.1f}%), neg={num_evs_neg} ({percent_num_neg:.1f}%)".ljust(columns))
+            print(f"  Triggers: pos={total_trig_pos}, neg={total_trig_neg}".ljust(columns))
+
+            if num_evs_neg > total_evs_neg:
+                print("  Warning: num_evs_neg > total_evs_neg")
+                exit()
+
+            # Progress bar
+            current_time = int(mv_iterator.get_current_time()) / 1000000
+            if max_duration_sec is not None:
+                block = "█"
+                percent = min(current_time / max_duration_sec, 1.0)
+                msg0 = f"  {current_time:.1f}/{max_duration_sec:.1f}s |"
+                msg1 = f"|{percent * 100:.1f}%  "
+                columns_bar = columns - len(msg0) - len(msg1) - 1
+                num_blocks = int(percent * columns_bar)
+                num_empty = columns_bar - num_blocks
+                print(f"{msg0}{block * num_blocks}{' ' * num_empty}{msg1}")
+            else:
+                print(f"  Current time: {current_time:.1f}s")
+
+            is_printed = True
 
     device.get_i_events_stream().stop_log_raw_data()
 
@@ -187,6 +248,7 @@ def main():
     parser.add_argument("--bias_fo", "--fo", type=int, default=0, help="bias_fo")
     parser.add_argument("--bias_hpf", "--hpf", type=int, default=0, help="bias_hpf")
     parser.add_argument("--bias_refr", "--refr", type=int, default=0, help="bias_refr")
+    parser.add_argument("--delta_t", type=float, default=0.05, help="Time interval [s] to read events")
     parser.add_argument("--roi", type=int, nargs="+", default=None, help="ROI: (x, y, width, height) or (width, height) or (width,)")
     args = parser.parse_args()
     verbose = True
@@ -195,7 +257,10 @@ def main():
         args.bias_diff_on = args.bias_diff_on_off
         args.bias_diff_off = args.bias_diff_on_off
 
-    record(args.output, args.duration, args.bias_diff, args.bias_diff_on, args.bias_diff_off, args.bias_fo, args.bias_hpf, args.bias_refr, args.roi, verbose)
+    if args.duration <= 0:
+        args.duration = None
+
+    record(args.output, args.duration, args.bias_diff, args.bias_diff_on, args.bias_diff_off, args.bias_fo, args.bias_hpf, args.bias_refr, args.roi, args.delta_t, verbose)
 
 
 if __name__ == "__main__":
