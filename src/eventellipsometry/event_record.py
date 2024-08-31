@@ -197,8 +197,8 @@ def record(
             num_evs = num_evs_pos + num_evs_neg
             percent_num_pos = num_evs_pos / num_evs * 100
             percent_num_neg = num_evs_neg / num_evs * 100
-            print(f"  Events (total): pos={total_evs_pos} ({percent_total_pos:.1f}%), neg={total_evs_neg} ({percent_total_neg:.1f}%)".ljust(columns))
-            print(f"  Events ({delta_t}s): pos={num_evs_pos} ({percent_num_pos:.1f}%), neg={num_evs_neg} ({percent_num_neg:.1f}%)".ljust(columns))
+            print(f"  Events(total): pos={total_evs_pos} ({percent_total_pos:.1f}%), neg={total_evs_neg} ({percent_total_neg:.1f}%)".ljust(columns))
+            print(f"  Events({delta_t:.2f}s): pos={num_evs_pos} ({percent_num_pos:.1f}%), neg={num_evs_neg} ({percent_num_neg:.1f}%)".ljust(columns))
             print(f"  Triggers: pos={total_trig_pos}, neg={total_trig_neg}".ljust(columns))
 
             if num_evs_neg > total_evs_neg:
