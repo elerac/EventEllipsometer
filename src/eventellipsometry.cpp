@@ -3,6 +3,11 @@
 #include <utility>
 #include <random>
 #include <optional>
+#include <complex>
+
+#include <Eigen/Core>
+#include <Eigen/SVD>
+#include <Eigen/Eigenvalues>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/eigen/dense.h>
@@ -10,9 +15,9 @@
 #include <nanobind/stl/vector.h>
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/optional.h>
+#include <nanobind/stl/complex.h>
 
 #include <omp.h>
-#include <Eigen/SVD>
 
 #include "equations.h"
 #include "optim.h"
@@ -73,8 +78,8 @@ Eigen::VectorXf fit(const Eigen::VectorXf &theta,
     Eigen::Vector<float, 16> x_best = x;
     for (int i_loop = 0; i_loop < max_iter; ++i_loop)
     {
-        // x should be between -1 and 1
-        // x = x.cwiseMax(-1.0).cwiseMin(1.0);
+        // x should be physically realizable Mueller matrix
+        x = filterMueller(x);
 
         // Check convergence
         Eigen::VectorXf time_diff_pred = (pn * x).array() / (pd * x).array();
@@ -273,4 +278,12 @@ NB_MODULE(_eventellipsometry_impl, m)
     m.def("diffLn", [](const nb::DRef<Eigen::Vector<float, 16>> &M, const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
           { return diffLn(M, theta, phi1, phi2); }, nb::arg("M").noconvert(), nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"));
     m.def("cvtEventStrucure", &cvtEventStrucure, nb::arg("x").noconvert(), nb::arg("y").noconvert(), nb::arg("t").noconvert(), nb::arg("p").noconvert(), nb::arg("width"), nb::arg("height"), nb::arg("t_min") = nb::none(), nb::arg("t_max") = nb::none());
+
+    m.def("filterMueller", [](const nb::DRef<Eigen::Vector<float, 16>> &m)
+          {
+              return filterMueller(m);
+              //
+          },                        //
+          nb::arg("m").noconvert(), //
+          "Apply filter to acquire physically realizable Mueller matrix.\n\nThis method is based on Shane R. Cloude, \"Conditions For The Physical Realisability Of Matrix Operators In Polarimetry\", Proc. SPIE 1166, 1990.\n\nParameters\n----------\nm : numpy.ndarray\n    Mueller matrix. (16,)\n\nReturns\n-------\nm_ : numpy.ndarray\n    Filtered Mueller matrix. (16,)");
 }
