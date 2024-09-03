@@ -31,7 +31,7 @@ add_library(lib STATIC src/equations.cpp src/optim.cpp)
 set_target_properties(lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 if(WIN32)
-  set(MY_RELEASE_OPTIONS /W4 /EHsc /Od /O2)
+  set(MY_RELEASE_OPTIONS /W4 /EHsc /Od /O2 /EIGEN_NO_DEBUG)
 else()
   set(MY_RELEASE_OPTIONS -Wall -Wextra -Wpedantic -O3)
 endif()
