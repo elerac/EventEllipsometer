@@ -147,10 +147,6 @@ Eigen::VectorXf fit(const Eigen::VectorXf &theta,
                                            0, 0.99, 0, 0,
                                            0, 0, -0.99, 0,
                                            0, 0, 0, -0.99};
-            // Eigen::Vector<float, 16> x_ = {1, -0.99, 0, 0,
-            //                                -0.99, 0.99, 0, 0,
-            //                                0, 0, 0, 0,
-            //                                0, 0, 0, 0};
             Eigen::VectorXf time_diff_pred_gt = (pn * x_).array() / (pd * x_).array();
             Eigen::VectorXf r_gt = time_diff - time_diff_pred_gt;
             float error_gt = r_gt.array().abs().mean();
@@ -179,7 +175,7 @@ Eigen::VectorXf fit(const Eigen::VectorXf &theta,
         }
     }
 
-    return x_best;
+    return x;
 }
 
 // std::vector<Eigen::Vector<float, 16>> fit_batch(const std::vector<nb::DRef<Eigen::VectorXf>> &theta,
