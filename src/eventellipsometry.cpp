@@ -31,7 +31,17 @@ float median(const Eigen::VectorXf &v)
 {
     auto v_ = v;
     std::sort(v_.data(), v_.data() + v_.size());
+    if (v_.size() % 2)
+    {
+        // odd
     return v_(v_.size() / 2);
+    }
+    else
+    {
+        // even
+        size_t i = v_.size() / 2;
+        return (v_(i - 1) + v_(i)) * 0.5;
+    }
 }
 
 template <bool DEBUG = false>
@@ -278,7 +288,8 @@ NB_MODULE(_eventellipsometry_impl, m)
     m.def("diffLn", [](const nb::DRef<Eigen::Vector<float, 16>> &M, const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
           { return diffLn(M, theta, phi1, phi2); }, nb::arg("M").noconvert(), nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"));
     m.def("cvtEventStrucure", &cvtEventStrucure, nb::arg("x").noconvert(), nb::arg("y").noconvert(), nb::arg("t").noconvert(), nb::arg("p").noconvert(), nb::arg("width"), nb::arg("height"), nb::arg("t_min") = nb::none(), nb::arg("t_max") = nb::none());
-
+    m.def("median", [](const nb::DRef<Eigen::VectorXf> &v)
+          { return median(v); }, nb::arg("v").noconvert(), "Calculate median");
     m.def("filterMueller", [](const nb::DRef<Eigen::Vector<float, 16>> &m)
           {
               return filterMueller(m);
