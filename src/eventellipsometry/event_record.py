@@ -220,7 +220,7 @@ def record(
                 block = "█"
                 percent = min(current_time / max_duration_sec, 1.0)
                 msg0 = f"  {current_time:.1f}/{max_duration_sec:.1f}s |"
-                msg1 = f"|{percent * 100:.1f}%  "
+                msg1 = f"| {percent * 100:.1f}%  "
                 columns_bar = columns - len(msg0) - len(msg1) - 1
                 num_blocks = int(percent * columns_bar)
                 num_empty = columns_bar - num_blocks
@@ -232,11 +232,14 @@ def record(
 
     device.get_i_events_stream().stop_log_raw_data()
 
-    filesize = os.path.getsize(filepath_raw)
-
     if verbose:
         print(f"{datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} Recording finished. ")
-        print(f"  Exported to: {filepath_raw} ({filesize / 1024 / 1024:.2f} MB)")
+        filesize = os.path.getsize(filepath_raw) / 1024 / 1024
+        if filesize / 1024 < 1:
+            filesize_str = f"{filesize:.2f} MB"
+        else:
+            filesize_str = f"{filesize / 1024:.2f} GB"
+        print(f"  Exported to: {filepath_raw} ({filesize_str})")
 
     # Save bias values
     bias_diff = device.get_i_ll_biases().get("bias_diff")
