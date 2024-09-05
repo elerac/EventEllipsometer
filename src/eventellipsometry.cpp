@@ -34,7 +34,7 @@ float median(const Eigen::VectorXf &v)
     if (v_.size() % 2)
     {
         // odd
-    return v_(v_.size() / 2);
+        return v_(v_.size() / 2);
     }
     else
     {
@@ -226,6 +226,7 @@ auto cvtEventStrucure(
         img_p[i].resize(width);
     }
 
+    // time range check
     bool enable_t_range = t_min.has_value() || t_max.has_value();
     if (!t_min.has_value() && t_max.has_value())
     {
@@ -236,7 +237,7 @@ auto cvtEventStrucure(
         t_max = std::numeric_limits<int64_t>::max();
     }
 
-    // Fill
+    // Fill image structure
     auto x_v = x.view();
     auto y_v = y.view();
     auto t_v = t.view();
@@ -259,6 +260,16 @@ auto cvtEventStrucure(
 
         img_t[y_][x_].push_back(t_);
         img_p[y_][x_].push_back(p_);
+    }
+
+    // Shrink to fit
+    for (size_t i = 0; i < height; ++i)
+    {
+        for (size_t j = 0; j < width; ++j)
+        {
+            img_t[i][j].shrink_to_fit();
+            img_p[i][j].shrink_to_fit();
+        }
     }
 
     return std::make_pair(img_t, img_p);
