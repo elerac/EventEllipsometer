@@ -3,7 +3,7 @@ import os
 import datetime
 import time
 import warnings
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, Sequence
 from pathlib import Path
 from metavision_core.event_io.raw_reader import initiate_device
 from metavision_core.event_io import EventsIterator
@@ -194,20 +194,20 @@ def record(
             # Statistics (filled with spaces at the left side)
             total_evs = total_evs_pos + total_evs_neg
             if total_evs > 0:
-                percent_total_pos = total_evs_pos / total_evs * 100
-                percent_total_neg = total_evs_neg / total_evs * 100
+                percent_total_pos = f"{total_evs_pos / total_evs * 100:.1f}%"
+                percent_total_neg = f"{total_evs_neg / total_evs * 100:.1f}%"
             else:
                 percent_total_pos = "N/A"
                 percent_total_neg = "N/A"
             num_evs = num_evs_pos + num_evs_neg
             if num_evs > 0:
-                percent_num_pos = num_evs_pos / num_evs * 100
-                percent_num_neg = num_evs_neg / num_evs * 100
+                percent_num_pos = f"{num_evs_pos / num_evs * 100:.1f}%"
+                percent_num_neg = f"{num_evs_neg / num_evs * 100:.1f}%"
             else:
                 percent_num_pos = "N/A"
                 percent_num_neg = "N/A"
-            print(f"  Events(total): pos={total_evs_pos} ({percent_total_pos:.1f}%), neg={total_evs_neg} ({percent_total_neg:.1f}%)".ljust(columns))
-            print(f"  Events({delta_t:.2f}s): pos={num_evs_pos} ({percent_num_pos:.1f}%), neg={num_evs_neg} ({percent_num_neg:.1f}%)".ljust(columns))
+            print(f"  Events(total): pos={total_evs_pos} ({percent_total_pos}), neg={total_evs_neg} ({percent_total_neg})".ljust(columns))
+            print(f"  Events({delta_t:.2f}s): pos={num_evs_pos} ({percent_num_pos}), neg={num_evs_neg} ({percent_num_neg})".ljust(columns))
             print(f"  Triggers: pos={total_trig_pos}, neg={total_trig_neg}".ljust(columns))
 
             if num_evs_neg > total_evs_neg:
