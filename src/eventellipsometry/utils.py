@@ -1,7 +1,8 @@
 import re
+from typing import Union
 
 
-def get_num_after_keyword(string: str, keyword: str) -> float:
+def get_num_after_keyword(string: str, keyword: str) -> Union[int, float]:
     """Extract a number in the string located after the specific keyword.
 
     Parameters
@@ -13,16 +14,16 @@ def get_num_after_keyword(string: str, keyword: str) -> float:
 
     Returns
     -------
-    number : float
+    number : Union[int, float]
         The extracted number.
 
     Examples
     --------
     >>> string = "00162 tl015 pl060 tv000 pv000.jpg"
     >>> get_num_after_keyword(string, "tl")
-        15.0
+        15
     >>> get_num_after_keyword(string, "pl")
-        60.0
+        60
     """
     pattern = rf"{keyword}([-+]?\d+\.?\d?)"
     string = str(string)
@@ -35,4 +36,8 @@ def get_num_after_keyword(string: str, keyword: str) -> float:
         raise RuntimeError(f"Multiple matches found {matches} in '{string}'. key='{keyword}'")
 
     number = float(matches[0])
+
+    if number.is_integer():
+        number = int(number)
+
     return number
