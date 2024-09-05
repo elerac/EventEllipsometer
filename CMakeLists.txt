@@ -44,7 +44,7 @@ if(MSVC)
 endif()
 
 # Compile extension module with size optimization and add the library
-nanobind_add_module(_eventellipsometry_impl src/eventellipsometry.cpp src/equations.cpp src/optim.cpp)
+nanobind_add_module(_eventellipsometry_impl NOMINSIZE src/eventellipsometry.cpp src/equations.cpp src/optim.cpp)
 target_link_libraries(_eventellipsometry_impl PRIVATE lib)
 
 # Eigen3
