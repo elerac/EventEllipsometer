@@ -20,10 +20,10 @@ class FastEventAccess:
         events: Dict[str, Any],
         t_min: Optional[int] = None,
         t_max: Optional[int] = None,
-        preview: bool = False,
+        verbose: bool = False,
     ):
         start_time = time.time()
-        if preview:
+        if verbose:
             print(f"This is {self.__class__.__name__} class.")
             print("Converting event data...")
 
@@ -52,31 +52,31 @@ class FastEventAccess:
 
         # Append t and p to each (x, y) position
         if cpp_available:
-            self.t_xy_list, self.p_xy_list = cvtEventStrucure(x, y, t, p, width, height, t_min, t_max)
+            self.t_img, self.p_img = cvtEventStrucure(x, y, t, p, width, height, t_min, t_max)
         else:
             num = len(x)
-            self.t_xy_list = [[[] for _ in range(width)] for _ in range(height)]
-            self.p_xy_list = [[[] for _ in range(width)] for _ in range(height)]
-            for xi, yi, ti, pi in tqdm(zip(x, y, t, p), total=num, disable=not preview, desc="Gather t and p (xy)"):
-                self.t_xy_list[yi][xi].append(ti)
-                self.p_xy_list[yi][xi].append(pi)
+            self.t_img = [[[] for _ in range(width)] for _ in range(height)]
+            self.p_img = [[[] for _ in range(width)] for _ in range(height)]
+            for xi, yi, ti, pi in tqdm(zip(x, y, t, p), total=num, disable=not verbose, desc="Gather t and p (xy)"):
+                self.t_img[yi][xi].append(ti)
+                self.p_img[yi][xi].append(pi)
 
         # Convert to ndarray
         dtype_t = t.dtype
         dtype_p = p.dtype
-        for j in trange(height, disable=not preview, desc=f"Convert to ndarray ({width}x{height})"):
+        for j in trange(height, disable=not verbose, desc=f"Convert to ndarray ({width}x{height})"):
             for i in range(width):
-                self.t_xy_list[j][i] = np.array(self.t_xy_list[j][i], dtype=dtype_t)
-                self.p_xy_list[j][i] = np.array(self.p_xy_list[j][i], dtype=dtype_p)
+                self.t_img[j][i] = np.array(self.t_img[j][i], dtype=dtype_t)
+                self.p_img[j][i] = np.array(self.p_img[j][i], dtype=dtype_p)
 
-        if preview:
+        if verbose:
             print("Data conversion completed.")
             elapsed_time = time.time() - start_time
             print(f"Elapsed time: {elapsed_time:.2f}s")
 
     def get(self, ix: int, iy: int, t_min: Optional[int] = None, t_max: Optional[int] = None) -> tuple[npt.NDArray, npt.NDArray]:
-        t_xy = self.t_xy_list[iy][ix]
-        p_xy = self.p_xy_list[iy][ix]
+        t_xy = self.t_img[iy][ix]
+        p_xy = self.p_img[iy][ix]
 
         if len(t_xy) == 0:
             return np.array([]), np.array([])
@@ -121,7 +121,7 @@ def main():
 
     events = {"x": x, "y": y, "t": t, "p": p, "width": width, "height": height}
 
-    events_fast = FastEventAccess(events, preview=True)
+    events_fast = FastEventAccess(events, verbose=True)
 
     print("-" * 20)
     print("Test get method")
