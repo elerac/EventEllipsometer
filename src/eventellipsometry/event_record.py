@@ -24,7 +24,7 @@ def record(
     bias_fo: int = 0,
     bias_hpf: int = 0,
     bias_refr: int = 0,
-    roi: Optional[list[int]] = None,
+    roi: Optional[Sequence[int]] = None,
     delta_t: float = 0.05,
     verbose: bool = True,
 ) -> Tuple[str, str]:
@@ -48,7 +48,7 @@ def record(
         bias_hpf, by default 0
     bias_refr : int, optional
         bias_refr, by default 0
-    roi : Optional[list[int]], optional
+    roi : Optional[Sequence[int]], optional
         ROI: (x, y, width, height) or (width, height) or (width,), by default None
     delta_t : float, optional
         Time interval [s] to read events, by default 0.05
