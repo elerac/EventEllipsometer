@@ -1,6 +1,6 @@
 from .event_record import *
 from .event_io import *
-from .event_structure import FastEventAccess
+from .eventmap import EventMapPy
 from .utils_mueller import *
 from . import utils
 
