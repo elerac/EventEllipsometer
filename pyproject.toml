@@ -12,7 +12,6 @@ dependencies = [
     "polanalyser>=3.0.0",
     "nanobind>=2.1.0",
     "tqdm>=4.64.1",
-    "torch>=2.4.0",
     "typing-extensions>=4.9.0",
     "numpy>=1.26.3",
     "ipykernel>=6.29.5",
@@ -41,7 +40,7 @@ build_cpp = "build_cpp:main"
 record = "eventellipsometry.event_record:main"
 raw2npz = "eventellipsometry.event_io:main"
 
-[[tool.rye.sources]]
-name = "pytorch"
-url = "https://download.pytorch.org/whl/cpu"
+# [[tool.rye.sources]]
+# name = "pytorch"
+# url = "https://download.pytorch.org/whl/cpu"
 
