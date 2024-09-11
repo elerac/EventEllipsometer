@@ -8,7 +8,7 @@ else()
 endif()
 
 if (MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj") # for debug build
 endif()
 
 find_package(Python 3.8 COMPONENTS Interpreter ${DEV_MODULE} REQUIRED)
@@ -31,16 +31,19 @@ find_package(nanobind CONFIG REQUIRED)
 # Enable optimization for core module
 # To achieve this, we should run separate compilation steps
 # https://nanobind.readthedocs.io/en/latest/api_cmake.html#command:nanobind_add_module
-add_library(lib STATIC src/equations.cpp src/optim.cpp)
-set_target_properties(lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# add_library(lib STATIC src/equations.cpp src/optim.cpp)
+# set_target_properties(lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-if(WIN32)
-  set(MY_RELEASE_OPTIONS /W4 /EHsc /Od /O2 /EIGEN_NO_DEBUG)
-else()
-  set(MY_RELEASE_OPTIONS -Wall -Wextra -Wpedantic -O3)
-endif()
+# if(WIN32)
+#   set(MY_RELEASE_OPTIONS /Od /O2)
+#   # set(MY_RELEASE_OPTIONS /W4 /EHsc /Od /O2 /EIGEN_NO_DEBUG)
+# else()
+#   set(MY_RELEASE_OPTIONS -Wall -Wextra -Wpedantic -O3)
+# endif()
 
-target_compile_options(lib PRIVATE "$<$<CONFIG:Release>:${MY_RELEASE_OPTIONS}>")
+# target_compile_options(lib PRIVATE "$<$<CONFIG:Release>:${MY_RELEASE_OPTIONS}>")
+
+
 
 # supress C4819 warning for eigen
 if(MSVC)
@@ -49,12 +52,13 @@ endif()
 
 # Compile extension module with size optimization and add the library
 nanobind_add_module(_eventellipsometry_impl NOMINSIZE src/eventellipsometry.cpp src/equations.cpp src/optim.cpp)
-target_link_libraries(_eventellipsometry_impl PRIVATE lib)
+# nanobind_add_module(_eventellipsometry_impl NOMINSIZE src/eventellipsometry.cpp src/equations.cpp src/optim.cpp)
+# target_link_libraries(_eventellipsometry_impl PRIVATE lib)
 
 # Eigen3
 find_package(Eigen3 REQUIRED)
 target_include_directories(_eventellipsometry_impl PRIVATE ${EIGEN3_INCLUDE_DIR})
-target_include_directories(lib PRIVATE ${EIGEN3_INCLUDE_DIR})
+# target_include_directories(lib PRIVATE ${EIGEN3_INCLUDE_DIR})
 
 # OpenMP
 find_package(OpenMP REQUIRED)
