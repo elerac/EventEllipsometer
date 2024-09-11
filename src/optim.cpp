@@ -15,7 +15,6 @@ using namespace std::complex_literals;
 // Solve Ax = 0
 Eigen::Vector<float, 16> svdSolve(const Eigen::Matrix<float, Eigen::Dynamic, 16> &A)
 {
-    // Note, it may works without ComputeThinU
     // https://eigen.tuxfamily.org/dox/group__SVD__Module.html
     Eigen::JacobiSVD<Eigen::Matrix<float, Eigen::Dynamic, 16>> svd(A, Eigen::ComputeThinV);
     // Eigen::BDCSVD<Eigen::MatrixXf> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
@@ -26,10 +25,10 @@ Eigen::Vector<float, 16> svdSolve(const Eigen::Matrix<float, Eigen::Dynamic, 16>
     return x;
 }
 
-Eigen::VectorXf diffLn(const Eigen::Vector<float, 16> &M, const Eigen::VectorXf &thetaVector, float phi1, float phi2)
+Eigen::VectorXf diffLn(const Eigen::Vector<float, 16> &m, const Eigen::VectorXf &thetaVector, float phi1, float phi2)
 {
     auto [numenator_coffs, denominator_coffs] = calcNumenatorDenominatorCoffs(thetaVector, phi1, phi2);
-    Eigen::VectorXf time_diff = (numenator_coffs * M).array() / (denominator_coffs * M).array();
+    Eigen::VectorXf time_diff = (numenator_coffs * m).array() / (denominator_coffs * m).array();
     return time_diff;
 }
 
