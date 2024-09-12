@@ -1,10 +1,6 @@
 #pragma once
-#include <random>
-
 #include <Eigen/Core>
 #include <Eigen/SVD>
-
-#include "equations.h"
 
 // Solve Ax = 0
 Eigen::Vector<float, 16> svdSolve(const Eigen::Matrix<float, Eigen::Dynamic, 16> &A)
