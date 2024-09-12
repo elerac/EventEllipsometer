@@ -30,11 +30,6 @@
 namespace nb = nanobind;
 using namespace nb::literals;
 
-int add(int a, int b)
-{
-    return a + b;
-}
-
 template <bool DEBUG = false>
 Eigen::Vector<float, 16> fit(const Eigen::VectorXf &theta,
                              const Eigen::VectorXf &dlogI,
@@ -354,7 +349,6 @@ NB_MODULE(_eventellipsometry_impl, m)
               return nb::ndarray<nb::numpy, int>(data, {height, width, 3}, owner);
               //
           });
-    m.def("add", &add);
     m.def("svdSolve", [](const nb::DRef<Eigen::Matrix<float, Eigen::Dynamic, 16>> &A)
           { return svdSolve<float, 16>(A); }, nb::arg("A").noconvert(), "Solve Ax = 0\n\nParameters\n----------\nA : numpy.ndarray\n    Matrix A. (n, m)\n\nReturns\n-------\nx : numpy.ndarray\n    Solution x. (m,). The x is normalized by first element.");
     // m.def("fit_batch", &fit_batch, nb::arg("theta").noconvert(), nb::arg("dlogI").noconvert(), nb::arg("max_iter") = 50, nb::arg("eps") = 1e-6, nb::arg("tol") = 1e-3);
