@@ -1,6 +1,8 @@
 #pragma once
+#include <random>
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
+
 using namespace std::complex_literals;
 
 Eigen::Vector<float, 16> filter_mueller(const Eigen::Vector<float, 16> &m)
@@ -50,4 +52,19 @@ Eigen::Vector<float, 16> filter_mueller(const Eigen::Vector<float, 16> &m)
     m_(15) = (h_(0) - h_(10) + h_(15) - h_(5)).real();
 
     return m_;
+}
+
+Eigen::Vector<float, 16> perturb_mueller(const Eigen::Vector<float, 16> &m, float sigma = 0.01)
+{
+    // Generate perturbed Mueller matrix via random perturbation
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::normal_distribution<float> dist(1.0, sigma); // Centered at 1.0 with standard deviation sigma
+    Eigen::Vector<float, 16> v;
+    v(0) = m(0);
+    for (int i = 1; i < 16; ++i)
+    {
+        v(i) = m(i) * dist(gen);
+    }
+    return v;
 }
