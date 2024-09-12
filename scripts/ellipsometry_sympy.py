@@ -182,6 +182,7 @@ def main():
 
     # Generate cpp functions
     cpp_funcs_str = ""
+    cpp_funcs_str += "#pragma once\n"
     cpp_funcs_str += "#include <utility>\n"
     cpp_funcs_str += "#include <Eigen/Core>\n"
     cpp_funcs_str += "#define _USE_MATH_DEFINES\n"
@@ -230,19 +231,19 @@ def main():
     cpp_funcs_str += "    return {numenator_coffs, denominator_coffs};\n"
     cpp_funcs_str += "}\n"
 
-    with open("src/equations.cpp", "w") as f:
+    with open("src/equations.h", "w") as f:
         f.write(cpp_funcs_str)
 
-    cpp_funcs_str_header = ""
-    cpp_funcs_str_header += "#pragma once\n"
-    cpp_funcs_str_header += "#include <utility>\n"
-    cpp_funcs_str_header += "#include <Eigen/Core>\n"
-    cpp_funcs_str_header += "\n"
-    cpp_funcs_str_header += "std::pair<Eigen::Matrix<float, Eigen::Dynamic, 16>, Eigen::Matrix<float, Eigen::Dynamic, 16>>\n"
-    cpp_funcs_str_header += "calcNumenatorDenominatorCoffs(const Eigen::VectorXf &thetaVector, float phi1, float phi2);\n"
+    # cpp_funcs_str_header = ""
+    # cpp_funcs_str_header += "#pragma once\n"
+    # cpp_funcs_str_header += "#include <utility>\n"
+    # cpp_funcs_str_header += "#include <Eigen/Core>\n"
+    # cpp_funcs_str_header += "\n"
+    # cpp_funcs_str_header += "std::pair<Eigen::Matrix<float, Eigen::Dynamic, 16>, Eigen::Matrix<float, Eigen::Dynamic, 16>>\n"
+    # cpp_funcs_str_header += "calcNumenatorDenominatorCoffs(const Eigen::VectorXf &thetaVector, float phi1, float phi2);\n"
 
-    with open("src/equations.h", "w") as f:
-        f.write(cpp_funcs_str_header)
+    # with open("src/equations.h", "w") as f:
+    #     f.write(cpp_funcs_str_header)
 
 
 if __name__ == "__main__":
