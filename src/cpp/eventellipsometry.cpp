@@ -26,6 +26,7 @@
 #include "array.h"
 #include "array_mueller.h"
 #include "dataframe.h"
+#include "mueller.h"
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -111,7 +112,7 @@ Eigen::VectorXf fit(const Eigen::VectorXf &theta,
     for (int i_loop = 0; i_loop < max_iter; ++i_loop)
     {
         // x should be physically realizable Mueller matrix
-        x = filterMueller(x);
+        x = filter_mueller(x);
 
         // Check convergence
         Eigen::VectorXf dlogI_pred = (pn * x).array() / (pd * x).array();
@@ -253,7 +254,7 @@ auto fit_frames(const std::vector<EventEllipsometryDataFrame> &dataframes)
 
     start = std::chrono::system_clock::now();
     // propagate
-    for (int iter = 0; iter < 50; ++iter)
+    for (int iter = 0; iter < 30; ++iter)
     {
         for (int irb = 0; irb < 2; ++irb)
         {
@@ -319,7 +320,7 @@ auto fit_frames(const std::vector<EventEllipsometryDataFrame> &dataframes)
                         }
 
                         // Refine the 3D line map via random perturbation
-                        Eigen::Vector<float, 16> m_perturbed = filterMueller(perturb_mueller(m_best));
+                        Eigen::Vector<float, 16> m_perturbed = filter_mueller(perturb_mueller(m_best));
                         float loss = loss_func(m_perturbed);
                         if (loss < loss_best)
                         {
@@ -432,8 +433,8 @@ NB_MODULE(_eventellipsometry_impl, m)
           { return diffLn(M, theta, phi1, phi2); }, nb::arg("M").noconvert(), nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"));
     m.def("median", [](const nb::DRef<Eigen::VectorXf> &v)
           { return median(v); }, nb::arg("v").noconvert(), "Calculate median");
-    m.def("filterMueller", [](const nb::DRef<Eigen::Vector<float, 16>> &m)
-          { return filterMueller(m); }, nb::arg("m").noconvert(), "Apply filter to acquire physically realizable Mueller matrix.\n\nThis method is based on Shane R. Cloude, \"Conditions For The Physical Realisability Of Matrix Operators In Polarimetry\", Proc. SPIE 1166, 1990.\n\nParameters\n----------\nm : numpy.ndarray\n    Mueller matrix. (16,)\n\nReturns\n-------\nm_ : numpy.ndarray\n    Filtered Mueller matrix. (16,)");
+    m.def("filter_mueller", [](const nb::DRef<Eigen::Vector<float, 16>> &m)
+          { return filter_mueller(m); }, nb::arg("m").noconvert(), "Apply filter to acquire physically realizable Mueller matrix.\n\nThis method is based on Shane R. Cloude, \"Conditions For The Physical Realisability Of Matrix Operators In Polarimetry\", Proc. SPIE 1166, 1990.\n\nParameters\n----------\nm : numpy.ndarray\n    Mueller matrix. (16,)\n\nReturns\n-------\nm_ : numpy.ndarray\n    Filtered Mueller matrix. (16,)");
     // m.def("propagate", &propagate, nb::arg("video_mueller").noconvert(), "Propagate the Mueller matrix");
 
     m.def("test_openmp", &test_openmp, nb::arg("height"), nb::arg("width"), "Test OpenMP");
