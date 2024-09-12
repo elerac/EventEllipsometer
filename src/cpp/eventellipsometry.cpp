@@ -200,30 +200,6 @@ Eigen::VectorXf fit(const Eigen::VectorXf &theta,
     return x;
 }
 
-auto test_openmp(size_t height, size_t width)
-{
-    std::vector<double> A(height, 0.0);
-    std::vector<double> B(height, 0.0);
-    std::vector<double> C(height, 0.0);
-    for (int i = 0; i < height; ++i)
-    {
-        A[i] = i;
-        B[i] = i;
-    }
-
-#pragma omp parallel for
-    for (int i = 0; i < height; ++i)
-    {
-        for (int j = 0; j < width; ++j)
-        {
-            for (int k = 0; k < 100000; ++k)
-            {
-                C[i] += A[i] * B[i] + A[i] / B[i];
-            }
-        }
-    }
-}
-
 auto fit_frames(const std::vector<EventEllipsometryDataFrame> &dataframes)
 {
     size_t num_frames = dataframes.size();
@@ -434,8 +410,6 @@ NB_MODULE(_eventellipsometry_impl, m)
     m.def("filter_mueller", [](const nb::DRef<Eigen::Vector<float, 16>> &m)
           { return filter_mueller(m); }, nb::arg("m").noconvert(), "Apply filter to acquire physically realizable Mueller matrix.\n\nThis method is based on Shane R. Cloude, \"Conditions For The Physical Realisability Of Matrix Operators In Polarimetry\", Proc. SPIE 1166, 1990.\n\nParameters\n----------\nm : numpy.ndarray\n    Mueller matrix. (16,)\n\nReturns\n-------\nm_ : numpy.ndarray\n    Filtered Mueller matrix. (16,)");
     // m.def("propagate", &propagate, nb::arg("video_mueller").noconvert(), "Propagate the Mueller matrix");
-
-    m.def("test_openmp", &test_openmp, nb::arg("height"), nb::arg("width"), "Test OpenMP");
 
     nb::class_<EventMap>(m, "EventMap")
         .def(nb::init<nb::DRef<Eigen::VectorX<uint16_t>>, nb::DRef<Eigen::VectorX<uint16_t>>, nb::DRef<Eigen::VectorX<int64_t>>, nb::DRef<Eigen::VectorX<int16_t>>, int, int>(),
