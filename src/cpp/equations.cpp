@@ -5,7 +5,7 @@
 
 // Calc numerator and denominator of the rational function
 std::pair<Eigen::Matrix<float, Eigen::Dynamic, 16>, Eigen::Matrix<float, Eigen::Dynamic, 16>>
-calcNumenatorDenominatorCoffs(const Eigen::VectorXf &thetaVector, float phi1, float phi2)
+calculate_ndcoffs(const Eigen::VectorXf &thetaVector, float phi1, float phi2)
 {
     size_t size = thetaVector.size();
     Eigen::Matrix<float, Eigen::Dynamic, 16> numenator_coffs(size, 16);

@@ -3,6 +3,7 @@
 #include <utility>
 #include <random>
 #include <optional>
+#include <complex>
 
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -69,7 +70,7 @@ Eigen::VectorXf fit(const Eigen::VectorXf &theta,
         return Eigen::VectorXf::Constant(16, std::numeric_limits<float>::quiet_NaN());
     }
 
-    auto [pn, pd] = calcNumenatorDenominatorCoffs(theta, phi1, phi2);
+    auto [pn, pd] = calculate_ndcoffs(theta, phi1, phi2);
 
     Eigen::Matrix<float, Eigen::Dynamic, 16> A(num, 16);
     A = (pn.array() - dlogI.replicate(1, 16).array() * pd.array());
@@ -240,7 +241,7 @@ auto fit_frames(const std::vector<EventEllipsometryDataFrame> &dataframes)
 
                         // Define loss function for target pixel
                         auto [theta, dlogI, weight, phi_offset] = dataframes[iz].get(ix, iy);
-                        auto [pn, pd] = calcNumenatorDenominatorCoffs(theta, 1.68, 2.66 - 5 * phi_offset);
+                        auto [pn, pd] = calculate_ndcoffs(theta, 1.68, 2.66 - 5 * phi_offset);
                         auto loss_func = [&pn, &pd, &dlogI](const Eigen::Vector<float, 16> &m)
                         {
                             if (m.array().isNaN().any())
@@ -386,8 +387,8 @@ NB_MODULE(_eventellipsometry_impl, m)
 
     m.def("fit_frames", &fit_frames, nb::arg("dataframes"), "Fit the data frames");
 
-    m.def("calcNumenatorDenominatorCoffs", [](const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
-          { return calcNumenatorDenominatorCoffs(theta, phi1, phi2); }, nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"), "Calculate numenator and denominator cofficients");
+    m.def("calculate_ndcoffs", [](const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
+          { return calculate_ndcoffs(theta, phi1, phi2); }, nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"), "Calculate numenator and denominator cofficients");
     m.def("median", [](const nb::DRef<Eigen::VectorXf> &v)
           { return median(v); }, nb::arg("v").noconvert(), "Calculate median");
     m.def("filter_mueller", [](const nb::DRef<Eigen::Vector<float, 16>> &m)
