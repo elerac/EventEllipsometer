@@ -1,5 +1,6 @@
 #pragma once
 #include <random>
+#include <complex>
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
 
