@@ -52,13 +52,13 @@ float median(const Eigen::VectorXf &v)
 }
 
 template <bool DEBUG = false>
-Eigen::VectorXf fit(const Eigen::VectorXf &theta,
-                    const Eigen::VectorXf &dlogI,
-                    float phi1,
-                    float phi2,
-                    float delta = 1.35,
-                    int max_iter = 50,
-                    float tol = 1e-3)
+Eigen::Vector<float, 16> fit(const Eigen::VectorXf &theta,
+                             const Eigen::VectorXf &dlogI,
+                             float phi1,
+                             float phi2,
+                             float delta = 1.35,
+                             int max_iter = 50,
+                             float tol = 1e-3)
 {
     // Count number of data points
     size_t num = theta.size();
@@ -66,7 +66,7 @@ Eigen::VectorXf fit(const Eigen::VectorXf &theta,
     // Return nan if there are not enough data points
     if (num < 15)
     {
-        return Eigen::VectorXf::Constant(16, std::numeric_limits<float>::quiet_NaN());
+        return Eigen::Vector<float, 16>::Constant(16, std::numeric_limits<float>::quiet_NaN());
     }
 
     auto [pn, pd] = calculate_ndcoffs(theta, phi1, phi2);
