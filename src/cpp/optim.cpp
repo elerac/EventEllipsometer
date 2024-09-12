@@ -21,10 +21,3 @@ Eigen::Vector<float, 16> svdSolve(const Eigen::Matrix<float, Eigen::Dynamic, 16>
     x *= div_x0;                                      // Normalize the vector
     return x;
 }
-
-Eigen::VectorXf diffLn(const Eigen::Vector<float, 16> &m, const Eigen::VectorXf &thetaVector, float phi1, float phi2)
-{
-    auto [numenator_coffs, denominator_coffs] = calcNumenatorDenominatorCoffs(thetaVector, phi1, phi2);
-    Eigen::VectorXf time_diff = (numenator_coffs * m).array() / (denominator_coffs * m).array();
-    return time_diff;
-}

@@ -11,5 +11,3 @@
 #include "equations.h"
 
 Eigen::Vector<float, 16> svdSolve(const Eigen::Matrix<float, Eigen::Dynamic, 16> &A);
-
-Eigen::VectorXf diffLn(const Eigen::Vector<float, 16> &m, const Eigen::VectorXf &thetaVector, float phi1, float phi2);

@@ -429,8 +429,6 @@ NB_MODULE(_eventellipsometry_impl, m)
 
     m.def("calcNumenatorDenominatorCoffs", [](const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
           { return calcNumenatorDenominatorCoffs(theta, phi1, phi2); }, nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"), "Calculate numenator and denominator cofficients");
-    m.def("diffLn", [](const nb::DRef<Eigen::Vector<float, 16>> &M, const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
-          { return diffLn(M, theta, phi1, phi2); }, nb::arg("M").noconvert(), nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"));
     m.def("median", [](const nb::DRef<Eigen::VectorXf> &v)
           { return median(v); }, nb::arg("v").noconvert(), "Calculate median");
     m.def("filter_mueller", [](const nb::DRef<Eigen::Vector<float, 16>> &m)
