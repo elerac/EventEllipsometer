@@ -19,6 +19,7 @@
 
 #include <omp.h>
 
+#include "utils.h"
 #include "equations.h"
 #include "optim.h"
 #include "eventmap.h"
@@ -32,23 +33,6 @@ using namespace nb::literals;
 int add(int a, int b)
 {
     return a + b;
-}
-
-float median(const Eigen::VectorXf &v)
-{
-    auto v_ = v;
-    std::sort(v_.data(), v_.data() + v_.size());
-    if (v_.size() % 2)
-    {
-        // odd
-        return v_(v_.size() / 2);
-    }
-    else
-    {
-        // even
-        size_t i = v_.size() / 2;
-        return (v_(i - 1) + v_(i)) * 0.5;
-    }
 }
 
 template <bool DEBUG = false>
