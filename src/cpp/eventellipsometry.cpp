@@ -23,7 +23,6 @@
 #include "optim.h"
 #include "eventmap.h"
 #include "array.h"
-#include "array_mueller.h"
 #include "dataframe.h"
 #include "mueller.h"
 
