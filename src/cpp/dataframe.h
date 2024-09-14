@@ -180,6 +180,7 @@ std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::Vector
                 Eigen::VectorXf theta = Eigen::Map<Eigen::VectorXf>(vec_theta.data(), vec_theta.size());
                 Eigen::VectorXf dlogI = Eigen::Map<Eigen::VectorXf>(vec_dlogI.data(), vec_dlogI.size());
                 Eigen::VectorXf weight = Eigen::Map<Eigen::VectorXf>(vec_weight.data(), vec_weight.size());
+                weight /= weight.mean(); // normalize weight
                 ellipsometry_eventmap.set(ix, iy, theta, dlogI, weight, phi_offsets[it]);
             }
         }
