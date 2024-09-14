@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <string>
-#include <Eigen/Dense>
+#include <Eigen/Core>
 
 template <typename T>
 auto searchsorted(const Eigen::VectorX<T> &a, T v_min, T v_max)
@@ -25,17 +25,21 @@ auto searchsorted(const Eigen::VectorX<T> &a, T v_min, T v_max)
 
 float median(const Eigen::VectorXf &v)
 {
+    // https://stackoverflow.com/a/34077478
     auto v_ = v;
-    std::sort(v_.data(), v_.data() + v_.size());
-    if (v_.size() % 2)
-    {
-        // odd
-        return v_(v_.size() / 2);
+    auto n = v_.size() / 2;
+    std::nth_element(v_.begin(), v_.begin() + n, v_.end());
+    auto med = v_[n];
+    if (!(v_.size() & 1))
+    { // If the set size is even
+        auto max_it = std::max_element(v_.begin(), v_.begin() + n);
+        med = (*max_it + med) / 2.0;
     }
-    else
-    {
-        // even
-        size_t i = v_.size() / 2;
-        return (v_(i - 1) + v_(i)) * 0.5;
-    }
+    return med;
+}
+
+float mad(const Eigen::VectorXf &v)
+{
+    // Median Absolute Deviation (MAD)
+    return median((v.array() - median(v)).abs());
 }
