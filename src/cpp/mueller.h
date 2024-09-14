@@ -62,13 +62,13 @@ Eigen::Vector<float, 16> perturb_mueller(const Eigen::Vector<float, 16> &m, floa
     std::random_device rd;
     std::mt19937 gen(rd());
     std::normal_distribution<float> dist(1.0, sigma); // Centered at 1.0 with standard deviation sigma
-    Eigen::Vector<float, 16> v;
-    v(0) = m(0);
+    Eigen::Vector<float, 16> m_;
+    m_(0) = m(0); // Do not perturb the first element
     for (int i = 1; i < 16; ++i)
     {
-        v(i) = m(i) * dist(gen);
+        m_(i) = m(i) * dist(gen);
     }
-    return v;
+    return m_;
 }
 
 class VideoMueller : public Array4d<float>
