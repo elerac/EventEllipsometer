@@ -14,12 +14,12 @@ class EventEllipsometryDataFrame
 public:
     int width;
     int height;
-    Array2d<Eigen::VectorXf> map_theta;  // theta
-    Array2d<Eigen::VectorXf> map_dlogI;  // Derivative of log intensity with respect to theta
-    Array2d<Eigen::VectorXf> map_weight; // Weight vector
-    float phi_offset;                    // Offset
+    Array2d<Eigen::VectorXf> map_theta;   // theta
+    Array2d<Eigen::VectorXf> map_dlogI;   // Derivative of log intensity with respect to theta
+    Array2d<Eigen::VectorXf> map_weights; // Weight vector
+    float phi_offset;                     // Offset
 
-    EventEllipsometryDataFrame(int width, int height) : width(width), height(height), map_theta(height, width), map_dlogI(height, width), map_weight(height, width)
+    EventEllipsometryDataFrame(int width, int height) : width(width), height(height), map_theta(height, width), map_dlogI(height, width), map_weights(height, width)
     {
     }
 
@@ -31,11 +31,11 @@ public:
             throw std::invalid_argument(msg);
         }
         // return std::make_pair(std::ref(map_theta(y, x)), std::ref(map_dlogI(y, x)));
-        return std::make_tuple(std::ref(map_theta(y, x)), std::ref(map_dlogI(y, x)), std::ref(map_weight(y, x)), phi_offset);
+        return std::make_tuple(std::ref(map_theta(y, x)), std::ref(map_dlogI(y, x)), std::ref(map_weights(y, x)), phi_offset);
     }
 
     // set the value of theta and dlogI
-    void set(size_t x, size_t y, const Eigen::VectorXf &theta, const Eigen::VectorXf &dlogI, const Eigen::VectorXf &weight, float phi_offset)
+    void set(size_t x, size_t y, const Eigen::VectorXf &theta, const Eigen::VectorXf &dlogI, const Eigen::VectorXf &weights, float phi_offset)
     {
         if (x >= width || y >= height) [[unlikely]]
         {
@@ -44,7 +44,7 @@ public:
         }
         map_theta(y, x) = theta;
         map_dlogI(y, x) = dlogI;
-        map_weight(y, x) = weight;
+        map_weights(y, x) = weights;
         this->phi_offset = phi_offset;
     }
 
@@ -153,10 +153,10 @@ std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::Vector
                 // theta = np.convolve(theta, np.array([0.5, 0.5]), mode="valid")
                 std::vector<float> vec_theta;
                 std::vector<float> vec_dlogI;
-                std::vector<float> vec_weight;
+                std::vector<float> vec_weights;
                 vec_theta.reserve(_theta.size() - 1);
                 vec_dlogI.reserve(_theta.size() - 1);
-                vec_weight.reserve(_theta.size() - 1);
+                vec_weights.reserve(_theta.size() - 1);
 
                 for (size_t i = 0; i < _theta.size() - 1; ++i)
                 {
@@ -173,15 +173,15 @@ std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::Vector
                     // theta
                     vec_theta.push_back((_theta(i) + _theta(i + 1)) * 0.5f);
 
-                    // weight
-                    vec_weight.push_back(1.0f / theta_diff);
+                    // weights
+                    vec_weights.push_back(theta_diff);
                 }
 
                 Eigen::VectorXf theta = Eigen::Map<Eigen::VectorXf>(vec_theta.data(), vec_theta.size());
                 Eigen::VectorXf dlogI = Eigen::Map<Eigen::VectorXf>(vec_dlogI.data(), vec_dlogI.size());
-                Eigen::VectorXf weight = Eigen::Map<Eigen::VectorXf>(vec_weight.data(), vec_weight.size());
-                weight /= weight.mean(); // normalize weight
-                ellipsometry_eventmap.set(ix, iy, theta, dlogI, weight, phi_offsets[it]);
+                Eigen::VectorXf weights = Eigen::Map<Eigen::VectorXf>(vec_weights.data(), vec_weights.size());
+                weights /= weights.mean(); // normalize weights
+                ellipsometry_eventmap.set(ix, iy, theta, dlogI, weights, phi_offsets[it]);
             }
         }
 
