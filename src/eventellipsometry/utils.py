@@ -1,13 +1,14 @@
 import re
+from pathlib import Path
 from typing import Union
 
 
-def get_num_after_keyword(string: str, keyword: str) -> Union[int, float]:
+def get_num_after_keyword(string: Union[str, Path], keyword: str) -> Union[int, float]:
     """Extract a number in the string located after the specific keyword.
 
     Parameters
     ----------
-    string : str
+    string : Union[str, Path]
         The string to be searched.
     keyword : str
         The keyword to be searched.
