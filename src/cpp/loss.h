@@ -29,7 +29,12 @@ public:
         return (r_abs_le_1).select(0.5 * r_abs.array().square(), r_abs.array() - 0.5).mean();
     }
 
-    Eigen::VectorXf weight() const
+    float loss(const Eigen::VectorXf &weights) const
+    {
+        return ((r_abs_le_1).select(0.5 * r_abs.array().square(), r_abs.array() - 0.5) * weights.array()).mean();
+    }
+
+    Eigen::VectorXf weights() const
     {
         return (r_abs_le_1).select(1.0f, 1.0f / r_abs.array());
     }
@@ -38,5 +43,11 @@ public:
     {
         compute(input, target);
         return loss();
+    }
+
+    float operator()(const Eigen::VectorXf &input, const Eigen::VectorXf &target, const Eigen::VectorXf &weights)
+    {
+        compute(input, target);
+        return loss(weights);
     }
 };

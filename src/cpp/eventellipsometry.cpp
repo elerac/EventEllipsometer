@@ -26,18 +26,20 @@
 #include "array.h"
 #include "dataframe.h"
 #include "mueller.h"
+#include "loss.h"
 
 namespace nb = nanobind;
 using namespace nb::literals;
 
 template <bool DEBUG = false>
-Eigen::Vector<float, 16> fit(const Eigen::VectorXf &theta,
-                             const Eigen::VectorXf &dlogI,
-                             float phi1,
-                             float phi2,
-                             float delta = 1.35,
-                             int max_iter = 50,
-                             float tol = 1e-3)
+Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
+                                         const Eigen::VectorXf &dlogI,
+                                         float phi1,
+                                         float phi2,
+                                         float delta = 1.35,
+                                         int max_iter = 10,
+                                         float tol = 1e-2,
+                                         const std::optional<Eigen::VectorXf> &weights = std::nullopt)
 {
     // Count number of data points
     size_t num = theta.size();
@@ -50,70 +52,63 @@ Eigen::Vector<float, 16> fit(const Eigen::VectorXf &theta,
 
     auto [pn, pd] = calculate_ndcoffs(theta, phi1, phi2);
 
+    // Construct matrix A for SVD
     Eigen::Matrix<float, Eigen::Dynamic, 16> A(num, 16);
     A = (pn.array() - dlogI.replicate(1, 16).array() * pd.array());
 
-    Eigen::Matrix<float, Eigen::Dynamic, 16> Ainit = A;
-
-    // Weight by dlogI
-    Eigen::VectorXf inv_dlogI = 1.0f / dlogI.array().abs();
-    for (int i = 0; i < 16; ++i)
+    // Apply weights for A
+    if (weights.has_value())
     {
-        A.col(i) = A.col(i).array() * inv_dlogI.array();
-        // Ainit.col(i) = Ainit.col(i).array() * inv_dlogI.array();
+        for (int i = 0; i < 16; ++i)
+        {
+            A.col(i) = A.col(i).array() * weights.value().array();
+        }
     }
 
-    // Initial guess
+    // Loss function
+    HuberLoss loss_func(delta);
+
+    // Solve initial guess
     Eigen::Vector<float, 16> x;
     x = svdSolve(A);
+    x = filter_mueller(x); // x should be physically realizable Mueller matrix
+
+    // Evaluate initial prediction
+    Eigen::VectorXf dlogI_pred = (pn * x).array() / (pd * x).array();
+    float error = loss_func(dlogI_pred, dlogI);
 
     // IRLS loop
     Eigen::Matrix<float, Eigen::Dynamic, 16> Aw(num, 16);
-    float error_prev = std::numeric_limits<float>::max();
-    Eigen::Vector<float, 16> x_best = x;
     for (int i_loop = 0; i_loop < max_iter; ++i_loop)
     {
-        // x should be physically realizable Mueller matrix
-        x = filter_mueller(x);
+        // Huber weight with previous residuals
+        Eigen::VectorXf w = loss_func.weights();
 
-        // Check convergence
-        Eigen::VectorXf dlogI_pred = (pn * x).array() / (pd * x).array();
-        Eigen::VectorXf r = dlogI - dlogI_pred;
-        auto r_abs = r.array().abs();
-        // auto r_sq = r.array().square();
-        float error = r_abs.mean();
-        if (error < error_prev)
-        {
-            error_prev = error;
-        }
-
-        float s = median((r.array() - median(r)).abs()) / 0.6745;
-        auto r_abs_scaled = (r_abs / s);
-
-        if (std::abs(error_prev - error) < tol)
-        {
-            break;
-        }
-        error_prev = error;
-
-        // l1 weight
-        // Eigen::VectorXf w = 1.0 / (r.array().abs() + eps);
-
-        // Huber weight
-        // const Eigen::VectorXf w = (r_abs < delta).select(1.0, delta / r_abs);
-        Eigen::VectorXf w = (r_abs_scaled < delta).select(1.0, delta / r_abs_scaled);
-
+        // Update A
         for (int i = 0; i < 16; ++i)
         {
             Aw.col(i) = A.col(i).array() * w.array();
         }
 
+        // Solve
         x = svdSolve(Aw);
+        x = filter_mueller(x);
+
+        // Evaluate prediction
+        dlogI_pred = (pn * x).array() / (pd * x).array();
+        float error_new = loss_func(dlogI_pred, dlogI);
+
+        // Check convergence
+        if (std::abs(error - error_new) < tol)
+        {
+            error = error_new;
+            break;
+        }
+        error = error_new;
 
         if constexpr (DEBUG)
         {
             std::cout << "iter: " << i_loop << "/" << max_iter << ", error: " << error << std::endl;
-            std::cout << "s: " << s << std::endl;
             auto np = nb::module_::import_("numpy");
             auto plt = nb::module_::import_("matplotlib.pyplot");
             auto theta_np = np.attr("array")(theta);
@@ -135,7 +130,7 @@ Eigen::Vector<float, 16> fit(const Eigen::VectorXf &theta,
             Eigen::VectorXf r_gt = dlogI - dlogI_pred_gt;
             float error_gt = r_gt.array().abs().mean();
 
-            std::cout << "error_gt: " << error_gt << std::endl;
+            // std::cout << "error_gt: " << error_gt << std::endl;
             auto dlogI_pred_gt_np = np.attr("array")(dlogI_pred_gt);
             plt.attr("plot")(theta_np, dlogI_pred_gt_np, "label"_a = "gt", "linestyle"_a = "--", "color"_a = "tab:green");
 
@@ -162,7 +157,7 @@ Eigen::Vector<float, 16> fit(const Eigen::VectorXf &theta,
     return x;
 }
 
-auto fit_frames(const std::vector<EventEllipsometryDataFrame> &dataframes)
+auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes)
 {
     size_t num_frames = dataframes.size();
     size_t height = dataframes[0].shape(0);
@@ -180,8 +175,8 @@ auto fit_frames(const std::vector<EventEllipsometryDataFrame> &dataframes)
         {
             for (int ix = 0; ix < width; ++ix)
             {
-                auto [theta, dlogI, weight, phi_offset] = dataframe.get(ix, iy);
-                Eigen::Vector<float, 16> m = fit(theta, dlogI, 1.68, 2.66 - 5 * phi_offset, 1.35, 3, 1e-2);
+                auto [theta, dlogI, weights, phi_offset] = dataframe.get(ix, iy);
+                Eigen::Vector<float, 16> m = fit_mueller_svd(theta, dlogI, 1.68, 2.66 - 5 * phi_offset, 1.35, 10, 1e-2, weights);
                 video_mueller(iz, iy, ix) = m;
             }
         }
@@ -192,19 +187,27 @@ auto fit_frames(const std::vector<EventEllipsometryDataFrame> &dataframes)
 
     start = std::chrono::system_clock::now();
     // propagate
-    for (int iter = 0; iter < 30; ++iter)
+
+    // HuberLoss loss_func_huber(1.35);
+    for (int iter = 0; iter < 10; ++iter)
     {
-        for (int irb = 0; irb < 2; ++irb)
+
+        for (int i_red_black = 0; i_red_black < 2; ++i_red_black) // Red: 0, Black: 1
         {
+
             for (int iz = 0; iz < num_frames; ++iz)
             {
+                auto &dataframe = dataframes[iz];
 #pragma omp parallel for schedule(dynamic)
                 for (int iy = 0; iy < height; ++iy)
                 {
-                    int iy_even = iy % 2;
-                    int ix0 = irb - iy_even;
-                    for (int ix = ix0; ix < width; ++ix)
+                    for (int ix = 0; ix < width; ++ix)
                     {
+                        if ((ix + iy) % 2 != i_red_black)
+                        {
+                            continue;
+                        }
+
                         Eigen::Vector<float, 16> m_best;
                         float loss_best;
 
@@ -218,37 +221,39 @@ auto fit_frames(const std::vector<EventEllipsometryDataFrame> &dataframes)
                         }
 
                         // Define loss function for target pixel
-                        auto [theta, dlogI, weight, phi_offset] = dataframes[iz].get(ix, iy);
+                        auto [theta, dlogI, weight, phi_offset] = dataframe.get(ix, iy);
                         auto [pn, pd] = calculate_ndcoffs(theta, 1.68, 2.66 - 5 * phi_offset);
-                        auto loss_func = [&pn, &pd, &dlogI](const Eigen::Vector<float, 16> &m)
+                        auto loss_func = [&pn, &pd, &dlogI, &weight](const Eigen::Vector<float, 16> &m)
                         {
-                            if (m.array().isNaN().any())
-                            {
-                                return std::numeric_limits<float>::max();
-                            }
-                            else
-                            {
-                                Eigen::VectorXf dlogI_pred = (pn * m).array() / (pd * m).array();
-                                Eigen::VectorXf r = dlogI - dlogI_pred;
-                                return r.array().abs().mean();
-                            }
+                            Eigen::VectorXf dlogI_pred = (pn * m).array() / (pd * m).array();
+                            Eigen::VectorXf r = dlogI - dlogI_pred;
+                            return r.array().abs().mean();
+                            // return (r.array().abs() * weight.array()).mean();
                         };
 
                         // Initialize the best loss (baseline)
                         loss_best = loss_func(m_best);
 
                         // Update the Mueller matrix via propagation
-                        std::vector<std::pair<int, int>> neighbors = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-5, 0}, {5, 0}, {0, -5}, {0, 5}};
-                        for (auto [dy, dx] : neighbors)
+                        // std::vector<std::pair<int, int>> neighbors = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-5, 0}, {5, 0}, {0, -5}, {0, 5}};
+
+                        std::vector<std::tuple<int, int, int>> neighbors = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {-5, 0, 0}, {5, 0, 0}, {0, -5, 0}, {0, 5, 0}, {0, 0, -1}, {0, 0, 1}};
+                        for (auto [dx, dy, dz] : neighbors)
                         {
                             int iy_ = iy + dy;
                             int ix_ = ix + dx;
-                            if (iy_ < 0 || iy_ >= height || ix_ < 0 || ix_ >= width)
+                            int iz_ = iz + dz;
+                            if (iy_ < 0 || iy_ >= height || ix_ < 0 || ix_ >= width || iz_ < 0 || iz_ >= num_frames)
                             {
                                 continue;
                             }
 
-                            Eigen::Vector<float, 16> m = video_mueller(iz, iy_, ix_);
+                            Eigen::Vector<float, 16> m = video_mueller(iz_, iy_, ix_);
+                            if (m.array().isNaN().any())
+                            {
+                                continue;
+                            }
+
                             float loss = loss_func(m);
                             if (loss < loss_best)
                             {
@@ -257,7 +262,7 @@ auto fit_frames(const std::vector<EventEllipsometryDataFrame> &dataframes)
                             }
                         }
 
-                        // Refine the 3D line map via random perturbation
+                        // Refine the Mueller matrix via random perturbation
                         Eigen::Vector<float, 16> m_perturbed = filter_mueller(perturb_mueller(m_best));
                         float loss = loss_func(m_perturbed);
                         if (loss < loss_best)
@@ -351,18 +356,18 @@ NB_MODULE(_eventellipsometry_impl, m)
           });
     m.def("svdSolve", [](const nb::DRef<Eigen::Matrix<float, Eigen::Dynamic, 16>> &A)
           { return svdSolve<float, 16>(A); }, nb::arg("A").noconvert(), "Solve Ax = 0\n\nParameters\n----------\nA : numpy.ndarray\n    Matrix A. (n, m)\n\nReturns\n-------\nx : numpy.ndarray\n    Solution x. (m,). The x is normalized by first element.");
-    // m.def("fit_batch", &fit_batch, nb::arg("theta").noconvert(), nb::arg("dlogI").noconvert(), nb::arg("max_iter") = 50, nb::arg("eps") = 1e-6, nb::arg("tol") = 1e-3);
-    m.def("fit", [](const nb::DRef<Eigen::VectorXf> &theta, const nb::DRef<Eigen::VectorXf> &dlogI, float phi1, float phi2, float delta = 1.35, int max_iter = 50, float tol = 1e-3, bool debug = false)
-          {
-              if (debug)
-                  return fit<true>(theta, dlogI, phi1, phi2, delta, max_iter, tol);
-              else
-                  return fit<false>(theta, dlogI, phi1, phi2, delta, max_iter, tol);
-              //
-          },
-          nb::arg("theta").noconvert(), nb::arg("dlogI").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("delta") = 1.35, nb::arg("max_iter") = 50, nb::arg("tol") = 1e-3, nb::arg("debug") = false, "Fit the data");
+    // m.def("fit_batch", &fit_batch, nb::arg("theta").noconvert(), nb::arg("dlogI").noconvert(), nb::arg("max_iter") = 10, nb::arg("eps") = 1e-6, nb::arg("tol") = 1e-2);
+    // m.def("fit_mueller_svd", [](const nb::DRef<Eigen::VectorXf> &theta, const nb::DRef<Eigen::VectorXf> &dlogI, float phi1, float phi2, float delta = 1.35, int max_iter = 10, float tol = 1e-2, bool debug = false)
+    //       {
+    //           if (debug)
+    //               return fit_mueller_svd<true>(theta, dlogI, phi1, phi2, delta, max_iter, tol);
+    //           else
+    //               return fit_mueller_svd<false>(theta, dlogI, phi1, phi2, delta, max_iter, tol);
+    //           //
+    //       },
+    //       nb::arg("theta").noconvert(), nb::arg("dlogI").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("delta") = 1.35, nb::arg("max_iter") = 10, nb::arg("tol") = 1e-2, nb::arg("debug") = false, "Fit the data");
 
-    m.def("fit_frames", &fit_frames, nb::arg("dataframes"), "Fit the data frames");
+    m.def("fit_mueller", &fit_mueller, nb::arg("dataframes"), "Fit the data frames");
 
     m.def("calculate_ndcoffs", [](const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
           { return calculate_ndcoffs(theta, phi1, phi2); }, nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"), "Calculate numenator and denominator cofficients");
