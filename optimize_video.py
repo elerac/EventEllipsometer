@@ -14,50 +14,6 @@ from tqdm import trange
 import polanalyser as pa
 from check_valid_mueller import ismueller, isstokes
 
-I = 1.0j
-Tn = 1 / 4 * np.array([[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, -I, 0, 0, I, 0], [0, 0, 1, 0, 0, 0, 0, I, 1, 0, 0, 0, 0, -I, 0, 0], [0, 0, 0, 1, 0, 0, -I, 0, 0, I, 0, 0, 1, 0, 0, 0], [0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, I, 0, 0, -I, 0], [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1], [0, 0, 0, I, 0, 0, 1, 0, 0, 1, 0, 0, -I, 0, 0, 0], [0, 0, I, 0, 0, 0, 0, 1, -I, 0, 0, 0, 0, 1, 0, 0], [0, 0, 1, 0, 0, 0, 0, -I, 1, 0, 0, 0, 0, I, 0, 0], [0, 0, 0, -I, 0, 0, 1, 0, 0, 1, 0, 0, I, 0, 0, 0], [1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1], [0, I, 0, 0, -I, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0], [0, 0, 0, 1, 0, 0, I, 0, 0, -I, 0, 0, 1, 0, 0, 0], [0, 0, -I, 0, 0, 0, 0, 1, I, 0, 0, 0, 0, 1, 0, 0], [0, -I, 0, 0, I, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0], [1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1]], dtype=complex)  # first row  # second row  # third row  # fourth row
-Tinv = LA.inv(Tn)
-
-
-def T(x):
-    return np.reshape((Tn @ np.reshape(x, (16, 1))), (4, 4))
-
-
-def invT(x):
-    return np.reshape((Tinv @ np.reshape(x, (16, 1))), (4, 4))
-
-
-# accoring to JoseJ.Gil (On optimal filtering of measured Mueller matrices)
-# The definition of normlaized eigenvalues are slightly different
-# We need to check.
-def GenericFilter(x):
-    e, v = LA.eigh(T(x))
-    D = np.diag(np.clip(e, 0, None))
-    return (invT(v @ D @ LA.inv(v))).real
-
-
-def GenericM00eigenFilter(y):
-    neg_e = y[y <= 0]
-    d = 0
-    d = np.sum(neg_e) / (4 - np.size(neg_e))
-    y = np.clip(y, 0, None)
-    y[y != 0] = y[y != 0] + d
-    # check for newly produced negative
-    # eigenvalues and filter again if necessary
-    neg_y = np.clip(y, None, 0)
-    s = np.size((neg_y[neg_y != 0]))
-    if s != 0:
-        y = GenericM00eigenFilter(y)
-    # done
-    return y
-
-
-def GenericZfilter(x):
-    e, v = LA.eigh(T(x))
-    D = GenericM00eigenFilter(e)
-    D = np.diag(D)
-    return (invT(v @ D @ LA.inv(v))).real
-
 
 def main():
     np.set_printoptions(precision=3, suppress=True)
