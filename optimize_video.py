@@ -1,4 +1,5 @@
 from pathlib import Path
+import time
 import numpy as np
 from numpy import linalg as LA
 import matplotlib.pyplot as plt
@@ -6,8 +7,8 @@ import eventellipsometry as ee
 
 # from scipy.optimize import least_squares
 import cv2
-import torch
-import torch.nn.functional as F
+
+
 from tqdm import trange
 
 import polanalyser as pa
@@ -31,8 +32,7 @@ def invT(x):
 # We need to check.
 def GenericFilter(x):
     e, v = LA.eigh(T(x))
-    # D = np.diag(np.clip(e, 0, None))
-    D = np.diag(e)
+    D = np.diag(np.clip(e, 0, None))
     return (invT(v @ D @ LA.inv(v))).real
 
 
@@ -121,12 +121,14 @@ def main():
     # filename_raw = "recordings/recording_2024-08-25_20-13-57.raw"  # -20, 30Hz, air , 100x100
     # filename_raw = "recordings/recording_2024-08-25_20-22-03.raw"  # -20, 30Hz, air (umpbrella), 100x100
     # filename_raw = "recordings/recording_2024-08-25_20-26-24.raw"  # -20, 30Hz, air (umpbrella), 100x100, 2nd
-    filename_raw = "recordings/recording_2024-08-25_20-28-44.raw"  # -20, 30Hz, air (umpbrella), 100x100, 3rd
+    # filename_raw = "recordings/recording_2024-08-25_20-28-44.raw"  # -20, 30Hz, air (umpbrella), 100x100, 3rd
     # filename_raw = "recordings/recording_2024-08-25_20-30-28.raw"  # -20, 30Hz, air (umpbrella), 100x100, 4th
     # filename_raw = "recordings/recording_2024-08-25_20-49-55.raw"  # -20, 30Hz, air, 540nm, 100x100, 5th
     # filename_raw = "recordings/recording_2024-08-25_21-05-55.raw"  # -30, 30Hz, air, 540nm, 100x100, 6th
     # filename_raw = "recordings/recording_2024-08-25_21-07-26.raw"  # -30, 30Hz, air, 540nm, 100x100, 7th
     # filename_raw = "recordings/recording_2024-08-25_21-31-16.raw"  # -20, 30Hz, air, 540nm, 512x512, 8th
+    # filename_raw = "recordings/recording_2024-08-27_21-54-17.raw"  # -20, 30Hz, metal, 100x100, 4th (good)
+    filename_raw = "recordings/recording_2024-08-27_22-16-54.raw"  # -30, 30Hz, NVIDIA GPU, 512x512, good
 
     events = ee.read_event(filename_raw)
     print(filename_raw)
@@ -170,7 +172,8 @@ def main():
     for i, (trig_t_x1_i, trig_t_x5_i, trig_t_diff_i, period_i, phi_offset_i) in enumerate(zip(trig_t_x1, trig_t_x5, trig_t_diff, period, phi_offsets)):
         print(f"Triggers {i}: {trig_t_x1_i:d}, {trig_t_x5_i:d}, {trig_t_diff_i:d}, {period_i:d}, {np.rad2deg(phi_offset_i):.2f}")
 
-    events_fast = ee.FastEventAccess(events, t_min=trig_t_x1[0], t_max=trig_t_x1[5])
+    # events_fast = ee.EventMapPy(events, t_min=trig_t_x1[0], t_max=trig_t_x1[5])
+    events_fast = ee.EventMap(events["x"], events["y"], events["t"], events["p"], events["width"], events["height"])
 
     width = events["width"]
     height = events["height"]
@@ -196,10 +199,80 @@ def main():
     phi2 = float(phi2)
 
     print("Calibration")
-    print(f"phi1: {np.rad2deg(phi1):.2f}")
-    print(f"phi2: {np.rad2deg(phi2):.2f}")
+    print(f"phi1: {np.rad2deg(phi1):.2f} ({phi1:.2f})")
+    print(f"phi2: {np.rad2deg(phi2):.2f} ({phi2:.2f})")
 
-    roi_w = roi_h = 100
+    roi_w = roi_h = 700
+
+    s = time.time()
+    ellipsometry_eventmaps = ee.construct_dataframes(events["x"], events["y"], events["t"], events["p"], width, height, trig_t, trig_p, C, -1.8 * C)
+    f = time.time()
+    print(f"Time (dataframes): {f - s:.2f} s")
+
+    # data_frame = ellipsometry_eventmaps[0]
+    # for i in range(3):
+    #     for j in range(3):
+    #         theta, dlogI, weight, phi_offset = data_frame.get(width // 2 + i, height // 2 + j)
+    #         m = ee.fit(theta, dlogI, phi1, phi2 - 5 * phi_offset, max_iter=10, tol=1e-3, delta=1.35, debug=True)
+
+    #         # add outlier noise (10%)
+    #         outlier = np.random.rand(len(dlogI)) > 0.9
+    #         dlogI[outlier] = np.random.normal(0, 100, np.sum(outlier))
+
+    #         print("Outlier")
+    #         print("delta", 1.35)
+    #         m = ee.fit(theta, dlogI, phi1, phi2 - 5 * phi_offset, max_iter=10, tol=1e-3, delta=1.35, debug=True)
+
+    #         print("delta", 1.35 * 1000)
+    #         m = ee.fit(theta, dlogI, phi1, phi2 - 5 * phi_offset, max_iter=10, tol=1e-3, delta=1.35 * 1000, debug=True)
+
+    # exit()
+
+    # exit()
+
+    print("fit")
+    s = time.time()
+    video_mueller = ee.fit_mueller(ellipsometry_eventmaps)
+    num_frames = len(ellipsometry_eventmaps)
+    video_mueller = np.reshape(video_mueller, (num_frames, height, width, 16))
+    video_mueller = np.reshape(video_mueller, (num_frames, height, width, 4, 4))
+    print(f"Time: {time.time() - s:.2f} s")
+
+    img_mueller_vis_list = [ee.mueller_image(video_mueller[i]) for i in range(num_frames)]
+
+    for i, img_mueller_vis in enumerate(img_mueller_vis_list):
+        cv2.imwrite(f"mueller_{i:03d}.png", img_mueller_vis)
+
+    while True:
+        key = -1
+        for i, img_mueller_vis in enumerate(img_mueller_vis_list):
+            img_mueller_vis = cv2.resize(img_mueller_vis, None, fx=0.25, fy=0.25)
+            cv2.imshow("mueller", img_mueller_vis)
+            key = cv2.waitKey(30)
+            if key == ord("q"):
+                break
+        if key == ord("q"):
+            break
+
+    exit()
+
+    for i, data_frame in enumerate(ellipsometry_eventmaps):
+        s = time.time()
+        img_mueller_flatten = ee.fit_frame(data_frame)
+        print(f"{i} Time: {time.time() - s:.2f} s")
+        img_mueller = np.reshape(img_mueller_flatten, (height, width, 16))
+        img_mueller = np.reshape(img_mueller, (height, width, 4, 4))
+        img_mueller_vis = ee.mueller_image(img_mueller)
+        img_mueller_vis = cv2.resize(img_mueller_vis, None, fx=0.25, fy=0.25)
+        cv2.imshow("mueller", img_mueller_vis)
+        key = cv2.waitKey(30)
+        if key == ord("q"):
+            break
+
+    exit()
+
+    # print("Ellipsometry eventmaps")
+    # exit()
 
     for frame_i in range(0, 5):
         img_mueller_DLT = np.zeros((roi_h, roi_w, 4, 4))
@@ -227,12 +300,16 @@ def main():
                             t_max = trig_t_x1[frame_i + k + 1]
                             phi_offset = phi_offsets[frame_i].item()
 
+                            # t, p = temporal_eventmap.event_maps[frame_i](width // 2 + xi - roi_w // 2 + i, height // 2 + yi - roi_h // 2 + j)
+
                             t, p = events_fast.get(width // 2 + xi - roi_w // 2 + i, height // 2 + yi - roi_h // 2 + j, t_min, t_max)
+
                             if len(t) <= 16:
                                 continue
                             t = (t - t_min) / (t_max - t_min) * np.pi
                             t_diff = np.convolve(t, [1, -1], mode="valid")
                             t_refr = 55  # 10
+                            t_refr = 0
                             t_diff = t_diff - (t_refr / (t_max - t_min) * np.pi)
                             t = np.convolve(t, [0.5, 0.5], mode="valid")
                             p = (2 * p - 1)[1:]
@@ -248,8 +325,20 @@ def main():
                             t_list.append(t)
                             gt_list.append(gt)
 
+                if len(t_list) == 0:
+                    continue
+
                 t = np.concatenate(t_list)
                 gt = np.concatenate(gt_list)
+
+                # t, gt = ellipsometry_eventmaps[frame_i].get(width // 2 + xi - roi_w // 2, height // 2 + yi - roi_h // 2)
+                # remove zero division
+                # index = ~np.isinf(gt2)
+                # t2 = t2[index]
+                # gt2 = gt2[index]
+
+                # print(np.allclose(t, t2, rtol=1e-3, atol=1e-3), np.allclose(gt, gt2, rtol=1e-3, atol=1e-3), gt[:3], gt2[:3])
+
                 if len(t) < 16:
                     continue
 
@@ -284,11 +373,12 @@ def main():
                     gt.astype(np.float32),
                     phi1,
                     phi2 - 5 * phi_offset,
-                    max_iter=20,
-                    tol=1e-4,
+                    max_iter=10,
+                    tol=1e-2,
                     delta=1.35,
                     debug=False,
                 )
+
                 # m = np.clip(m, -1, 1)
                 M = np.reshape(m, (4, 4))
 
