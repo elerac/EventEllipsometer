@@ -4,16 +4,56 @@
 
 ### Python Environment
 
-This project is developed with [rye](https://github.com/astral-sh/rye) for managing the python environment. To construct the python environment, run the `rye sync` command. 
+(Not necessary) This project is developed with [rye](https://github.com/astral-sh/rye) for managing the python environment. To construct the python environment, run the `rye sync` command.
 
 ### C++ Extension
 
 This code has a CPP extension for the event data processing. To enable the extension, the extension needs to be built manually. The extension can be built by just running the `build_cpp.py` script. Or, run `build_cpp` command through rye. 
 When building the extension, Eigen and OpenMP are required.
 
-### Event Camera Operation
+### Event Camera Record
 
-The event camera is operated by the Metavision SDK. The SDK can be installed by following the instruction in the [Metavision SDK](https://docs.prophesee.ai/stable/index.html).
+The event camera is operated by [Metavision SDK](https://docs.prophesee.ai/stable/index.html). Make sure to the SDK is installed and can be imported with Python (`import metavision_core`).
+
+You can record the event data by running the `event_record.py` script, inside the `src/eventellipsometry` directory.
+
+```bash
+python src/eventellipsometry/event_record.py
+```
+
+### Synthetic Data Generation
+
+#### Mitsuba3 
+
+To render the synthetic data, [Mitsuba3](https://github.com/mitsuba-renderer/mitsuba3) renderer with '*_spectral_polarized' variant is required. This variant requires to build by yourself.
+
+The scene files (3D model, pbsdf) need to be prepared in the `scenes` directory. 
+
+- [bunny.ply](https://github.com/mitsuba-renderer/mitsuba-tutorials/blob/master/scenes/meshes/bunny.ply)
+- [pbsdf](https://vclab.kaist.ac.kr/siggraph2020/pbrdfdataset/kaistdataset.html)
+
+```bash
+scenes
+├── meshes
+│   ├── bunny.ply
+│   └── ...
+├── pbsdf
+│   ├── 9_blue_billard_mitsuba
+│   │   ├── 9_blue_billard_inpainted.pbsdf
+│   │   └── ...
+│   └── ...
+└── ...
+```
+
+The rendering can be done by running the `render_images.py` script.
+
+```bash
+python scripts/render_images.py
+```
+
+#### DVS Voltmeter
+
+After render the images, the images are converted to the event data by the [DVS-Voltmeter](https://github.com/Lynn0306/DVS-Voltmeter) [Lin+, ECCV2022]. This repository self-contains the DVS-Voltmeter code that is modified for this project.
 
 ### Hardware Development
 
