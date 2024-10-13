@@ -51,3 +51,48 @@ public:
         return loss(weights);
     }
 };
+
+class L1Loss
+{
+public:
+    float epsilon;
+
+private:
+    Eigen::VectorXf r_abs;
+
+public:
+    L1Loss(float epsilon = 1e-6) : epsilon(epsilon) {}
+
+    void compute(const Eigen::VectorXf &input, const Eigen::VectorXf &target)
+    {
+        Eigen::VectorXf resid = input - target;
+        r_abs = resid.array().abs();
+    }
+
+    float loss() const
+    {
+        return r_abs.mean();
+    }
+
+    float loss(const Eigen::VectorXf &weights) const
+    {
+        return (r_abs.array() * weights.array()).mean();
+    }
+
+    Eigen::VectorXf weights() const
+    {
+        return 1.0f / (r_abs.array() + epsilon);
+    }
+
+    float operator()(const Eigen::VectorXf &input, const Eigen::VectorXf &target)
+    {
+        compute(input, target);
+        return loss();
+    }
+
+    float operator()(const Eigen::VectorXf &input, const Eigen::VectorXf &target, const Eigen::VectorXf &weights)
+    {
+        compute(input, target);
+        return loss(weights);
+    }
+};
