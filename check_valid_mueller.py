@@ -1,101 +1,54 @@
 import numpy as np
 import numpy.typing as npt
+import polanalyser as pa
+import time
+
+ISMUELLER_STOKES = "ISMUELLER_STOKES"  # Stokes criterion by brute-force
+ISMUELLER_GK = "ISMUELLER_GK"  # Givens-Kostinski, 1993
 
 
-def _movelastaxis(a: np.ndarray, source: int) -> np.ndarray:
-    """Equivalent to `np.moveaxis(a, source, -1)` but does not move the axis if source is -1"""
-    if source != -1:
-        a = np.moveaxis(a, source, -1)
-    return a
+def ismueller(mueller: np.ndarray, method: str = ISMUELLER_STOKES):
+    if method == ISMUELLER_STOKES:
+        """Check stokes criterion for Mueller matrix with brute-force approach."""
+        num = 100000
+        chunk_num = 10
+        count = 0
+        mask = np.full(mueller.shape[:-2], True, dtype=bool)
+        while True:
+            # Project random Stokes vectors to the Mueller matrix
+            # the output should be Stokes vectors
+            s_in = pa.random.stokes(dop=1.0, size=chunk_num)  # (num, 4)
+            s_out = np.einsum("...ij,...kj->...ki", mueller[mask], s_in, optimize="optimal")  # (..., num, 4)
+            isstokes = pa.isstokes(s_out)  # (..., num)
+            mask[mask] = np.all(isstokes, axis=-1)  # (...)
 
+            # Check the exit condition
+            count += chunk_num
+            if count >= num:
+                break
 
-def isstokes(stokes: np.ndarray, atol: float = 1.0e-8, axis: int = -1) -> npt.NDArray[np.bool_]:
-    """Check if the Stokes vector is physically valid.
+            # Increase the chunk size
+            chunk_num = min(chunk_num * 2, num - count)
 
-    Parameters
-    ----------
-    stokes : np.ndarray
-        Stokes vector.
-    atol : float, optional
-        Absolute tolerance, by default 1.0e-8.
-    axis : int, optional
-        The axis that contains the Stokes vectors, by default -1.
+        return mask
 
-    Returns
-    -------
-    np.ndarray
-        This is scalar if the input is a single Stokes vector, and an array of booleans if the input is a stack of Stokes vectors.
-
-    Examples
-    --------
-    >>> s_a = np.array([1.0, 0.0, 0.0, 0.0])
-    >>> s_b = np.array([1.0, 1.0, 0.0, 0.0])
-    >>> s_c = np.array([1.0, 1.01, 0.0, 0.0])
-    >>> s_abc = np.stack([s_a, s_b, s_c], axis=0)
-    >>> isstokes(s_a)
-    True
-    >>> isstokes(s_b)
-    True
-    >>> isstokes(s_c)
-    False
-    >>> isstokes(s_abc)
-    [ True  True False]
-    """
-    stokes = _movelastaxis(stokes, axis)
-    s0 = stokes[..., 0]
-    s1 = stokes[..., 1]
-    s2 = stokes[..., 2]
-    s3 = stokes[..., 3]
-
-    # The intensity should be positive
-    is_valid_intensity = s0 > 0
-
-    # The DoP should be smaller than 1
-    # The criterion is (s0**2 - (s1**2 + s2**2 + s3**2)) >= 0
-    # but allow a small negative value due to numerical errors
-    is_valid_dop = (s0**2 - (s1**2 + s2**2 + s3**2)) > -abs(atol)
-
-    return np.bitwise_and(is_valid_intensity, is_valid_dop)
-
-
-def ismueller(mueller: np.ndarray, method: str = "bf"):
-    method = method.lower()
-    if method == "bf":  # Brute-force
-        for _ in range(10000):
-            # Generate a random Stokes vector (dop = 1)
-            s123 = np.random.uniform(-1, 1, 3)
-            s123 = s123 / np.linalg.norm(s123)
-            stokes_in = np.array([1.0, *s123])
-
-            # Apply the Mueller matrix
-            stokes_out = mueller @ stokes_in
-            if not isstokes(stokes_out):
-                import polanalyser as pa
-
-                print("sin=", stokes_in, pa.cvtStokesToDoP(stokes_in))
-                print("sout=", stokes_out, pa.cvtStokesToDoP(stokes_out))
-                return False
-        return True
-
-    elif method == "gk":  # Givens-Kostinski, 1993
-        G = np.diag([1.0, -1.0, -1.0, -1.0])
-        M = mueller
-        eigenvalues, eigenvectors = np.linalg.eigh(G @ M.T @ G @ M)
+    elif method == ISMUELLER_GK:  # Givens-Kostinski, 1993
+        G = np.diag([1.0, -1.0, -1.0, -1.0])  # (4, 4)
+        M = mueller  # (..., 4, 4)
+        M_T = np.moveaxis(M, -1, -2)  # (..., 4, 4)
+        eigenvalues, eigenvectors = np.linalg.eigh(G @ M_T @ G @ M)
 
         # All eigenvalues should be real
         is_real = np.allclose(np.imag(eigenvalues), 0)
 
-        if not is_real:
-            return False
-
         # The eigenvectors S_{\sigma_1} corresponding to the largest eigenvalue should be a valid Stokes vector
         # Q1. How to determine the largest eigenvalue? Should I use abs()?
         # Q2. Should I normalize the Stokes vector?
-        stokes_sigma1 = eigenvectors[:, np.argmax(np.abs(eigenvalues))]
-        stokes_sigma1 = stokes_sigma1 / stokes_sigma1[0]
-        is_stokes = isstokes(stokes_sigma1)
-
-        return is_real and is_stokes
+        index = np.argmax(np.abs(eigenvalues), axis=-1)  # (...,)
+        stokes_sigma1 = np.take_along_axis(eigenvectors, index[..., None, None], axis=-2)[..., 0, :]  # (..., 4)
+        stokes_sigma1 = stokes_sigma1 / stokes_sigma1[..., 0][..., None]
+        is_stokes = pa.isstokes(stokes_sigma1)  # (...,)
+        return np.bitwise_and(is_real, is_stokes)
 
     else:  # https://github.com/usnistgov/pySCATMECH/blob/master/pySCATMECH/mueller.py
         M = mueller
@@ -127,17 +80,24 @@ def ismueller(mueller: np.ndarray, method: str = "bf"):
 
 def main():
     np.set_printoptions(precision=3, suppress=True)
+    np.random.seed(0)
 
-    while True:
-        M = np.random.rand(4, 4) * 2 - 1
-        M[0, 0] = 1.0
-        # M = np.random.choice([-1, 1]) * M + 2 * np.linalg.norm(M, ord=2) * np.diag([1, 0, 0, 0])
-        # M = M / M[0, 0]
-        ismueller_bruteforce = ismueller(M, method="BF")
-        ismueller_gk = ismueller(M, method="GK")
-        print(f"valid={ismueller_bruteforce} (BF), valid={ismueller_gk} (GK)")
-        if ismueller_bruteforce:
-            break
+    M = np.random.rand(100, 100, 4, 4) * 2 - 1
+    M[..., 0, 0] = 1.0
+
+    M = np.eye(4) + 0.1 * M
+
+    time_start = time.time()
+    ismueller_bf = ismueller(M, method=ISMUELLER_STOKES)
+    time_end = time.time()
+    print(f"Time (BF): {time_end - time_start:.3f} sec")
+
+    time_start = time.time()
+    ismueller_gk = ismueller(M, method=ISMUELLER_GK)
+    time_end = time.time()
+    print(f"Time (GK): {time_end - time_start:.3f} sec")
+
+    print(f"valid={np.sum(ismueller_bf)} (BF), valid={np.sum(ismueller_gk)} (GK)")
 
 
 if __name__ == "__main__":
