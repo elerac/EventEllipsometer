@@ -3,7 +3,6 @@
 #include <utility>
 #include <random>
 #include <optional>
-#include <complex>
 
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -15,7 +14,6 @@
 #include <nanobind/stl/vector.h>
 #include <nanobind/stl/pair.h>
 #include <nanobind/stl/optional.h>
-#include <nanobind/stl/complex.h>
 
 #include <omp.h>
 
@@ -66,7 +64,8 @@ Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
     }
 
     // Loss function
-    HuberLoss loss_func(delta);
+    // HuberLoss loss_func(delta);
+    L1Loss loss_func;
 
     // Solve initial guess
     Eigen::Vector<float, 16> x;
@@ -157,14 +156,34 @@ Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
     return x;
 }
 
-auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes)
+auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes, bool verbose = false)
 {
+    std::chrono::system_clock::time_point start, end;
+
     size_t num_frames = dataframes.size();
     size_t height = dataframes[0].shape(0);
     size_t width = dataframes[0].shape(1);
     VideoMueller video_mueller(num_frames, height, width);
 
-    std::chrono::system_clock::time_point start, end;
+    if (verbose)
+    {
+        std::cout << "Fitting Mueller matrix video..." << std::endl;
+        std::cout << "(" << num_frames << ", " << height << ", " << width << ", 4, 4)" << std::endl;
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // Per-pixel Reconstruction
+    // --------------------------------------------------------------------------------------------
+
+    if (verbose)
+    {
+        std::cout << "Per-pixel Reconstruction..." << std::endl;
+        //     std::cout << "  " << "phi_calib1: " << phi_calib1 << std::endl;
+        //     std::cout << "  " << "phi_calib2: " << phi_calib2 << std::endl;
+        //     std::cout << "  " << "delta: " << delta << std::endl;
+        //     std::cout << "  " << "max_iter_svd: " << max_iter_svd << std::endl;
+        //     std::cout << "  " << "tol: " << tol << std::endl;
+    }
 
     start = std::chrono::system_clock::now();
     for (int iz = 0; iz < num_frames; ++iz)
@@ -183,10 +202,22 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes)
     }
     end = std::chrono::system_clock::now();
     double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    std::cout << "Elapsed (initial guess): " << elapsed << std::endl;
+    if (verbose)
+    {
+        std::cout << "Elapsed (per-pixel): " << elapsed * 0.001 << " s" << std::endl;
+        std::cout << "--------------------------------" << std::endl;
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // Propagation and Refinement
+    // --------------------------------------------------------------------------------------------
+    if (verbose)
+    {
+        std::cout << "Propagation and Refinement..." << std::endl;
+        // std::cout << "  " << "max_iter_propagate: " << max_iter_propagate << std::endl;
+    }
 
     start = std::chrono::system_clock::now();
-    // propagate
 
     // HuberLoss loss_func_huber(1.35);
     for (int iter = 0; iter < 10; ++iter)
@@ -280,9 +311,20 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes)
 
     end = std::chrono::system_clock::now();
     elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    std::cout << "Elapsed (propagate): " << elapsed << std::endl;
+    if (verbose)
+    {
+        std::cout << "Elapsed (propagate): " << elapsed * 0.001 << " s" << std::endl;
+        std::cout << "--------------------------------" << std::endl;
+    }
 
-    return video_mueller._vector;
+    // --------------------------------------------------------------------------------------------
+
+    // Convert to numpy array
+    float *data = new float[video_mueller._vector.size()];
+    std::move(video_mueller._vector.begin(), video_mueller._vector.end(), data);
+    nb::capsule owner(data, [](void *p) noexcept
+                      { delete[] (float *)p; });
+    return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, -1, 4, 4>, nb::c_contig>(data, {num_frames, height, width, 4, 4}, owner);
 }
 
 NB_MODULE(_eventellipsometry_impl, m)
@@ -290,73 +332,8 @@ NB_MODULE(_eventellipsometry_impl, m)
     m.def("searchsorted", [](const nb::DRef<Eigen::VectorX<float>> &a, float v_min, float v_max)
           { return searchsorted<float>(a, v_min, v_max); }, nb::arg("a").noconvert(), nb::arg("v_min"), nb::arg("v_max"));
 
-    m.def("test", [](nb::ndarray<int, nb::shape<-1, -1, 3>, nb::c_contig, nb::device::cpu> array_py)
-          {
-              //
-              size_t height = array_py.shape(0);
-              size_t width = array_py.shape(1);
-
-              Array3d<int> array(height, width, 3);
-
-              for (size_t i = 0; i < height; ++i)
-              {
-                  for (size_t j = 0; j < width; ++j)
-                  {
-                      for (size_t k = 0; k < 3; ++k)
-                      {
-                          array(i, j, k) = array_py(i, j, k);
-                      }
-                  }
-              }
-
-              std::chrono::system_clock::time_point start, end;
-
-              start = std::chrono::system_clock::now();
-              for (int i = 0; i < height; ++i)
-              {
-                  for (size_t j = 0; j < width; ++j)
-                  {
-                      for (size_t k = 0; k < 3; ++k)
-                      {
-                          array(i, j, k) *= 2;
-                      }
-                  }
-              }
-              end = std::chrono::system_clock::now();
-              double elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-              std::cout << "Elapsed: " << elapsed << std::endl;
-
-              start = std::chrono::system_clock::now();
-
-              size_t width_3 = width * 3;
-              size_t height_width_3 = height * width_3;
-              int *ptr0 = array._vector.data();
-              for (size_t i = 0; i < height_width_3; i += width_3)
-              {
-                  int *ptr01 = ptr0 + i;
-                  for (size_t j = 0; j < width_3; j += 3)
-                  {
-                      // get pointer and convert to eigen vector
-                      int *ptr = ptr01 + j;
-                      Eigen::Map<Eigen::Vector3i> v(ptr);
-                      v *= 2;
-                  }
-              }
-
-              end = std::chrono::system_clock::now();
-              elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-              std::cout << "Elapsed: " << elapsed << std::endl;
-
-              int *data = new int[array._vector.size()];
-              std::move(array._vector.begin(), array._vector.end(), data);
-              nb::capsule owner(data, [](void *p) noexcept
-                                { delete[] (int *)p; });
-              return nb::ndarray<nb::numpy, int>(data, {height, width, 3}, owner);
-              //
-          });
     m.def("svdSolve", [](const nb::DRef<Eigen::Matrix<float, Eigen::Dynamic, 16>> &A)
           { return svdSolve<float, 16>(A); }, nb::arg("A").noconvert(), "Solve Ax = 0\n\nParameters\n----------\nA : numpy.ndarray\n    Matrix A. (n, m)\n\nReturns\n-------\nx : numpy.ndarray\n    Solution x. (m,). The x is normalized by first element.");
-    // m.def("fit_batch", &fit_batch, nb::arg("theta").noconvert(), nb::arg("dlogI").noconvert(), nb::arg("max_iter") = 10, nb::arg("eps") = 1e-6, nb::arg("tol") = 1e-2);
     // m.def("fit_mueller_svd", [](const nb::DRef<Eigen::VectorXf> &theta, const nb::DRef<Eigen::VectorXf> &dlogI, float phi1, float phi2, float delta = 1.35, int max_iter = 10, float tol = 1e-2, bool debug = false)
     //       {
     //           if (debug)
@@ -367,7 +344,7 @@ NB_MODULE(_eventellipsometry_impl, m)
     //       },
     //       nb::arg("theta").noconvert(), nb::arg("dlogI").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("delta") = 1.35, nb::arg("max_iter") = 10, nb::arg("tol") = 1e-2, nb::arg("debug") = false, "Fit the data");
 
-    m.def("fit_mueller", &fit_mueller, nb::arg("dataframes"), "Fit the data frames");
+    m.def("fit_mueller", &fit_mueller, nb::arg("dataframes").noconvert(), nb::arg("verbose") = false, nb::rv_policy::reference);
 
     m.def("calculate_ndcoffs", [](const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
           { return calculate_ndcoffs(theta, phi1, phi2); }, nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"), "Calculate numenator and denominator cofficients");
@@ -375,7 +352,6 @@ NB_MODULE(_eventellipsometry_impl, m)
           { return median(v); }, nb::arg("v").noconvert(), "Calculate median");
     m.def("filter_mueller", [](const nb::DRef<Eigen::Vector<float, 16>> &m)
           { return filter_mueller(m); }, nb::arg("m").noconvert(), "Apply filter to acquire physically realizable Mueller matrix.\n\nThis method is based on Shane R. Cloude, \"Conditions For The Physical Realisability Of Matrix Operators In Polarimetry\", Proc. SPIE 1166, 1990.\n\nParameters\n----------\nm : numpy.ndarray\n    Mueller matrix. (16,)\n\nReturns\n-------\nm_ : numpy.ndarray\n    Filtered Mueller matrix. (16,)");
-    // m.def("propagate", &propagate, nb::arg("video_mueller").noconvert(), "Propagate the Mueller matrix");
 
     nb::class_<EventMap>(m, "EventMap")
         .def(nb::init<nb::DRef<Eigen::VectorX<uint16_t>>, nb::DRef<Eigen::VectorX<uint16_t>>, nb::DRef<Eigen::VectorX<int64_t>>, nb::DRef<Eigen::VectorX<int16_t>>, int, int>(),
