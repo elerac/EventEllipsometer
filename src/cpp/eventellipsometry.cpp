@@ -35,7 +35,6 @@ Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
                                          const Eigen::VectorXf &dlogI,
                                          float phi1,
                                          float phi2,
-                                         float delta = 1.35,
                                          int max_iter = 10,
                                          float tol = 1e-2,
                                          const std::optional<Eigen::VectorXf> &weights = std::nullopt)
@@ -157,9 +156,16 @@ Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
     return x;
 }
 
-auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes, bool verbose = false)
+auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes,
+                 float phi1,
+                 float phi2,
+                 int max_iter_svd = 10,
+                 float tol = 1e-2,
+                 int max_iter_propagate = 10,
+                 bool verbose = false)
 {
     std::chrono::system_clock::time_point start, end;
+    double elapsed;
 
     size_t num_frames = dataframes.size();
     size_t height = dataframes[0].shape(0);
@@ -168,8 +174,10 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes, bool
 
     if (verbose)
     {
+        std::cout << "----------------------------------" << std::endl;
         std::cout << "Fitting Mueller matrix video..." << std::endl;
-        std::cout << "(" << num_frames << ", " << height << ", " << width << ", 4, 4)" << std::endl;
+        std::cout << "  " << "(" << num_frames << ", " << height << ", " << width << ", 4, 4)" << std::endl;
+        std::cout << "----------------------------------" << std::endl;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -178,12 +186,12 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes, bool
 
     if (verbose)
     {
+        std::cout << "----------------------------------" << std::endl;
         std::cout << "Per-pixel Reconstruction..." << std::endl;
-        //     std::cout << "  " << "phi_calib1: " << phi_calib1 << std::endl;
-        //     std::cout << "  " << "phi_calib2: " << phi_calib2 << std::endl;
-        //     std::cout << "  " << "delta: " << delta << std::endl;
-        //     std::cout << "  " << "max_iter_svd: " << max_iter_svd << std::endl;
-        //     std::cout << "  " << "tol: " << tol << std::endl;
+        std::cout << "  " << "phi1: " << phi1 << std::endl;
+        std::cout << "  " << "phi2: " << phi2 << std::endl;
+        std::cout << "  " << "max_iter_svd: " << max_iter_svd << std::endl;
+        std::cout << "  " << "tol: " << tol << std::endl;
     }
 
     start = std::chrono::system_clock::now();
@@ -196,17 +204,17 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes, bool
             for (int ix = 0; ix < width; ++ix)
             {
                 auto [theta, dlogI, weights, phi_offset] = dataframe.get(ix, iy);
-                Eigen::Vector<float, 16> m = fit_mueller_svd(theta, dlogI, 1.68, 2.66 - 5 * phi_offset, 1.35, 10, 1e-2, weights);
+                Eigen::Vector<float, 16> m = fit_mueller_svd(theta, dlogI, phi1, phi2 - 5 * phi_offset, max_iter_svd, tol, weights);
                 video_mueller(iz, iy, ix) = m;
             }
         }
     }
     end = std::chrono::system_clock::now();
-    double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     if (verbose)
     {
-        std::cout << "Elapsed (per-pixel): " << elapsed * 0.001 << " s" << std::endl;
-        std::cout << "--------------------------------" << std::endl;
+        std::cout << "  " << "-> Elapsed (per-pixel): " << elapsed * 0.001 << " s" << std::endl;
+        std::cout << "----------------------------------" << std::endl;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -214,14 +222,15 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes, bool
     // --------------------------------------------------------------------------------------------
     if (verbose)
     {
+        std::cout << "----------------------------------" << std::endl;
         std::cout << "Propagation and Refinement..." << std::endl;
-        // std::cout << "  " << "max_iter_propagate: " << max_iter_propagate << std::endl;
+        std::cout << "  " << "max_iter_propagate: " << max_iter_propagate << std::endl;
     }
 
     start = std::chrono::system_clock::now();
 
-    // HuberLoss loss_func_huber(1.35);
-    for (int iter = 0; iter < 10; ++iter)
+    srand(0); // Set random seed for reproducibility
+    for (int iter = 0; iter < max_iter_propagate; ++iter)
     {
 
         for (int i_red_black = 0; i_red_black < 2; ++i_red_black) // Red: 0, Black: 1
@@ -254,13 +263,13 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes, bool
 
                         // Define loss function for target pixel
                         auto [theta, dlogI, weight, phi_offset] = dataframe.get(ix, iy);
-                        auto [pn, pd] = calculate_ndcoffs(theta, 1.68, 2.66 - 5 * phi_offset);
+                        auto [pn, pd] = calculate_ndcoffs(theta, phi1, phi2 - 5 * phi_offset);
                         auto loss_func = [&pn, &pd, &dlogI, &weight](const Eigen::Vector<float, 16> &m)
                         {
                             Eigen::VectorXf dlogI_pred = (pn * m).array() / (pd * m).array();
                             Eigen::VectorXf r = dlogI - dlogI_pred;
-                            return r.array().abs().mean();
-                            // return (r.array().abs() * weight.array()).mean();
+                            // return r.array().abs().mean();
+                            return (r.array().abs() * weight.array()).mean();
                         };
 
                         // Initialize the best loss (baseline)
@@ -314,8 +323,8 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes, bool
     elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     if (verbose)
     {
-        std::cout << "Elapsed (propagate): " << elapsed * 0.001 << " s" << std::endl;
-        std::cout << "--------------------------------" << std::endl;
+        std::cout << "  " << "-> Elapsed (propagate): " << elapsed * 0.001 << " s" << std::endl;
+        std::cout << "----------------------------------" << std::endl;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -325,7 +334,7 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes, bool
     std::move(video_mueller._vector.begin(), video_mueller._vector.end(), data);
     nb::capsule owner(data, [](void *p) noexcept
                       { delete[] (float *)p; });
-    return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, -1, 4, 4>, nb::c_contig>(data, {num_frames, height, width, 4, 4}, owner);
+    return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, -1, 4, 4>, nb::device::cpu, nb::c_contig>(data, {num_frames, height, width, 4, 4}, owner);
 }
 
 NB_MODULE(_eventellipsometry_impl, m)
@@ -335,17 +344,8 @@ NB_MODULE(_eventellipsometry_impl, m)
 
     m.def("svdSolve", [](const nb::DRef<Eigen::Matrix<float, Eigen::Dynamic, 16>> &A)
           { return svdSolve<float, 16>(A); }, nb::arg("A").noconvert(), "Solve Ax = 0\n\nParameters\n----------\nA : numpy.ndarray\n    Matrix A. (n, m)\n\nReturns\n-------\nx : numpy.ndarray\n    Solution x. (m,). The x is normalized by first element.");
-    // m.def("fit_mueller_svd", [](const nb::DRef<Eigen::VectorXf> &theta, const nb::DRef<Eigen::VectorXf> &dlogI, float phi1, float phi2, float delta = 1.35, int max_iter = 10, float tol = 1e-2, bool debug = false)
-    //       {
-    //           if (debug)
-    //               return fit_mueller_svd<true>(theta, dlogI, phi1, phi2, delta, max_iter, tol);
-    //           else
-    //               return fit_mueller_svd<false>(theta, dlogI, phi1, phi2, delta, max_iter, tol);
-    //           //
-    //       },
-    //       nb::arg("theta").noconvert(), nb::arg("dlogI").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("delta") = 1.35, nb::arg("max_iter") = 10, nb::arg("tol") = 1e-2, nb::arg("debug") = false, "Fit the data");
 
-    m.def("fit_mueller", &fit_mueller, nb::arg("dataframes").noconvert(), nb::arg("verbose") = false, nb::rv_policy::reference);
+    m.def("fit_mueller", &fit_mueller, nb::arg("dataframes").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("max_iter_svd") = 10, nb::arg("tol") = 1e-2, nb::arg("max_iter_propagate") = 10, nb::arg("verbose") = false, "Fit Mueller matrix video.\n\nParameters\n----------\ndataframes : list of EventEllipsometryDataFrame\n    List of EventEllipsometryDataFrame.\nphi1 : float\n    Phi1.\nphi2 : float\n    Phi2.\nmax_iter_svd : int\n    Maximum number of iterations for SVD.\ntol : float\n    Tolerance for convergence.\nmax_iter_propagate : int\n    Maximum number of iterations for propagation.\nverbose : bool\n    Verbose mode.\n\nReturns\n-------\nvideo_mueller : numpy.ndarray\n    Video Mueller matrix. (num_frames, height, width, 4, 4)");
 
     m.def("calculate_ndcoffs", [](const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
           { return calculate_ndcoffs(theta, phi1, phi2); }, nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"), "Calculate numenator and denominator cofficients");
