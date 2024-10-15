@@ -90,7 +90,7 @@ def record(
         except OSError as e:
             if i == (max_retries - 1):
                 raise e
-            warnings.warn(f"Failed to initialize device. Retry {i + 1}/{max_retries}.", stacklevel=2)
+            warnings.warn(f"Failed to initialize device. Retry {i + 1}/{max_retries}.", stacklevel=1)
             time.sleep(1)
             continue
         break
