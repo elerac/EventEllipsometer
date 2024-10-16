@@ -49,6 +49,8 @@ def main():
     #     print(f"Triggers {i}: {trig_t_x1_i:d}, {trig_t_x5_i:d}, {trig_t_diff_i:d}, {period_i:d}, {np.rad2deg(phi_offset_i):.2f}")
 
     # Calib
+    print("Calibration parameters")
+    print(f"  QWP offset")
     phi1 = np.deg2rad(56)
     phi2 = np.deg2rad(146)
 
@@ -62,14 +64,11 @@ def main():
     # filename_calib_phi2 = "calib/qwp_offset/phi2.txt"
     # phi1 = float(np.loadtxt(filename_calib_phi1, comments="%"))
     # phi2 = float(np.loadtxt(filename_calib_phi2, comments="%"))
-
-    print("Calibration parameters")
-    print(f"  QWP offset")
     print(f"    phi1: {np.rad2deg(phi1):.2f} ({phi1:.2f})")
     print(f"    phi2: {np.rad2deg(phi2):.2f} ({phi2:.2f})")
+    print(f"  Thresholds")
     filename_C_on = f"calib/thresh/on/diff{bias_diff}_diff_on{bias_diff_on}_diff_off{bias_diff_off}.npy"
     filename_C_off = f"calib/thresh/off/diff{bias_diff}_diff_on{bias_diff_on}_diff_off{bias_diff_off}.npy"
-    print(f"  Thresholds")
     print(f"    Con : {filename_C_on}")
     print(f"    Coff: {filename_C_off}")
     img_C_on = np.load(filename_C_on).astype(np.float32)
