@@ -4,6 +4,7 @@ import cv2
 import matplotlib.pyplot as plt
 import polanalyser as pa
 import os
+import datetime
 
 
 def main():
@@ -54,12 +55,22 @@ def main():
     print(f"phi2: {np.rad2deg(phi2):.2f}")
 
     # Write the result to calib/qwp_offset.txt
-    filename_txt = "calib/qwp_offset/qwp_offset.txt"
-    os.makedirs(os.path.dirname(filename_txt), exist_ok=True)
-    with open(filename_txt, "w") as f:
-        f.write(f"{filename_raw} % filename_raw\n")
-        f.write(f"{phi1} % phi1\n")
-        f.write(f"{phi2} % phi2\n")
+    datetime_now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    filename_phi1 = "calib/qwp_offset/phi1.txt"
+    os.makedirs(os.path.dirname(filename_phi1), exist_ok=True)
+    with open(filename_phi1, "w") as f:
+        f.write(f"% {datetime_now}\n")
+        f.write(f"% {filename_raw}\n")
+        f.write(f"{phi1:.6f}")
+    filename_phi2 = "calib/qwp_offset/phi2.txt"
+    with open(filename_phi2, "w") as f:
+        f.write(f"% {datetime_now}\n")
+        f.write(f"% {filename_raw}\n")
+        f.write(f"{phi2:.6f}")
+
+    # Read exported phi1 and phi2 again
+    # phi1 = np.loadtxt(filename_phi1, comments="%")
+    # phi2 = np.loadtxt(filename_phi2, comments="%")
 
     # Visualize the error map
     vmin = np.percentile(img_error, 1)
