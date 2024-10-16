@@ -27,4 +27,5 @@ src/eventellipsometry/_eventellipsometry_impl/
 *.pyi
 
 # event data
-recordings/
+recordings/*
+!recordings/filenames.py
