@@ -67,6 +67,12 @@ public:
 
 auto clean_triggers(const std::vector<int64_t> &trig_t_x1, const std::vector<int64_t> &trig_t_x5)
 {
+    // Check there are at least two triggers
+    if (trig_t_x1.size() < 2 || trig_t_x5.size() < 2)
+    {
+        throw std::invalid_argument("There should be at least two triggers");
+    }
+
     // If the first trigger is a 5th, delete it.
     std::vector<int64_t> trig_t_x1_clean = trig_t_x1;
     std::vector<int64_t> trig_t_x5_clean = trig_t_x5;
@@ -131,6 +137,18 @@ std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::Vector
     // {
     //     trig_t_x1.pop_back();
     // }
+
+    // Check img_C_on are positive values
+    if (img_C_on.minCoeff() <= 0.0f)
+    {
+        throw std::invalid_argument("img_C_on should be positive values");
+    }
+
+    // Check img_C_off are negative values
+    if (img_C_off.maxCoeff() >= 0.0f)
+    {
+        throw std::invalid_argument("img_C_off should be negative values");
+    }
 
     auto [trig_t_x1, trig_t_x5] = clean_triggers(trig_t_x1_, trig_t_x5_);
 
