@@ -96,7 +96,7 @@ def main():
     print(f"Total reconstruction time: {time.time() - time_start:.2f} s")
 
     print("Save Mueller matrix video")
-    filename_npz = Path("mmvideo") / f"{Path(args.filename_raw).stem}_iter_svd{args.max_iter_svd}_tol{args.tol}_iter_propagate{args.max_iter_propagate}.npz"
+    filename_npz = Path("mmvideos") / f"{Path(args.filename_raw).stem}_iter_svd{args.max_iter_svd}_tol{args.tol}_iter_propagate{args.max_iter_propagate}.npz"
     filename_npz.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(filename_npz.with_suffix(".npz"), video_mm=video_mm)
     print(f"  {filename_npz}")
