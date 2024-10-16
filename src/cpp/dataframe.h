@@ -65,6 +65,29 @@ public:
     }
 };
 
+auto clean_triggers(const std::vector<int64_t> &trig_t_x1, const std::vector<int64_t> &trig_t_x5)
+{
+    // If the first trigger is a 5th, delete it.
+    std::vector<int64_t> trig_t_x1_clean = trig_t_x1;
+    std::vector<int64_t> trig_t_x5_clean = trig_t_x5;
+    if ((trig_t_x5[0] - trig_t_x1[0]) < 0)
+    {
+        trig_t_x5_clean.erase(trig_t_x5_clean.begin());
+    }
+
+    // If the length of the triggers is not the same, delete the last one from the longer one.
+    if (trig_t_x5_clean.size() > trig_t_x1_clean.size())
+    {
+        trig_t_x5_clean.pop_back();
+    }
+    if (trig_t_x5_clean.size() < trig_t_x1_clean.size())
+    {
+        trig_t_x1_clean.pop_back();
+    }
+
+    return std::make_pair(trig_t_x1_clean, trig_t_x5_clean);
+}
+
 std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::VectorX<uint16_t> &x,
                                                              const Eigen::VectorX<uint16_t> &y,
                                                              const Eigen::VectorX<int64_t> &t,
@@ -78,36 +101,38 @@ std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::Vector
 {
 
     // Triggers
-    std::vector<int64_t> trig_t_x1;
-    std::vector<int64_t> trig_t_x5;
+    std::vector<int64_t> trig_t_x1_;
+    std::vector<int64_t> trig_t_x5_;
     for (size_t i = 0; i < trig_t.size(); ++i)
     {
         bool is_on = trig_p(i) > 0;
         if (is_on)
         {
-            trig_t_x5.push_back(trig_t(i));
+            trig_t_x5_.push_back(trig_t(i));
         }
         else
         {
-            trig_t_x1.push_back(trig_t(i));
+            trig_t_x1_.push_back(trig_t(i));
         }
     }
 
-    // If the first trigger is a 5th, delete it.
-    if ((trig_t_x5[0] - trig_t_x1[0]) < 0)
-    {
-        trig_t_x5.erase(trig_t_x5.begin());
-    }
+    // // If the first trigger is a 5th, delete it.
+    // if ((trig_t_x5[0] - trig_t_x1[0]) < 0)
+    // {
+    //     trig_t_x5.erase(trig_t_x5.begin());
+    // }
 
-    // If the length of the triggers is not the same, delete the last one from the longer one.
-    if (trig_t_x5.size() > trig_t_x1.size())
-    {
-        trig_t_x5.pop_back();
-    }
-    if (trig_t_x5.size() < trig_t_x1.size())
-    {
-        trig_t_x1.pop_back();
-    }
+    // // If the length of the triggers is not the same, delete the last one from the longer one.
+    // if (trig_t_x5.size() > trig_t_x1.size())
+    // {
+    //     trig_t_x5.pop_back();
+    // }
+    // if (trig_t_x5.size() < trig_t_x1.size())
+    // {
+    //     trig_t_x1.pop_back();
+    // }
+
+    auto [trig_t_x1, trig_t_x5] = clean_triggers(trig_t_x1_, trig_t_x5_);
 
     // Calculate the phi_offsets
     std::vector<float> phi_offsets(trig_t_x1.size() - 1);

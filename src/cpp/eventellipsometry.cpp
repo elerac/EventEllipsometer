@@ -372,4 +372,23 @@ NB_MODULE(_eventellipsometry_impl, m)
           { return construct_dataframes(x, y, t, p, width, height, trig_t, trig_p, img_C_on, img_C_off); }, nb::arg("x").noconvert(), nb::arg("y").noconvert(), nb::arg("t").noconvert(), nb::arg("p").noconvert(), nb::arg("width"), nb::arg("height"), nb::arg("trig_t").noconvert(), nb::arg("trig_p").noconvert(), nb::arg("img_C_on").noconvert(), nb::arg("img_C_off").noconvert());
     m.def("construct_dataframes", [](const nb::DRef<Eigen::VectorX<uint16_t>> &x, const nb::DRef<Eigen::VectorX<uint16_t>> &y, const nb::DRef<Eigen::VectorX<int64_t>> &t, const nb::DRef<Eigen::VectorX<int16_t>> &p, int width, int height, const nb::DRef<Eigen::VectorX<int64_t>> &trig_t, const nb::DRef<Eigen::VectorX<int16_t>> &trig_p, float C_on, float C_off)
           { return construct_dataframes(x, y, t, p, width, height, trig_t, trig_p, C_on, C_off); }, nb::arg("x").noconvert(), nb::arg("y").noconvert(), nb::arg("t").noconvert(), nb::arg("p").noconvert(), nb::arg("width"), nb::arg("height"), nb::arg("trig_t").noconvert(), nb::arg("trig_p").noconvert(), nb::arg("C_on"), nb::arg("C_off"));
+
+    m.def("clean_triggers", &clean_triggers, nb::arg("trig_t_x1").noconvert(), nb::arg("trig_t_x5").noconvert());
+    m.def("clean_triggers", [](const nb::DRef<Eigen::VectorX<int64_t>> &trig_t_x1, const nb::DRef<Eigen::VectorX<int64_t>> &trig_t_x5)
+          {
+        // Eigen::Vector to std::vector
+        std::vector<int64_t> trig_t_x1_vec(trig_t_x1.size());
+        std::move(trig_t_x1.data(), trig_t_x1.data() + trig_t_x1.size(), trig_t_x1_vec.begin());
+        std::vector<int64_t> trig_t_x5_vec(trig_t_x5.size());
+        std::move(trig_t_x5.data(), trig_t_x5.data() + trig_t_x5.size(), trig_t_x5_vec.begin());
+
+        auto [trig_t_x1_clean_vec, trig_t_x5_clean_vec] = clean_triggers(trig_t_x1_vec, trig_t_x5_vec);
+        
+        // std::vector to Eigen::Vector
+        Eigen::VectorX<int64_t> trig_t_x1_clean(trig_t_x1_clean_vec.size());
+        std::move(trig_t_x1_clean_vec.begin(), trig_t_x1_clean_vec.end(), trig_t_x1_clean.data());
+        Eigen::VectorX<int64_t> trig_t_x5_clean(trig_t_x5_clean_vec.size());
+        std::move(trig_t_x5_clean_vec.begin(), trig_t_x5_clean_vec.end(), trig_t_x5_clean.data());
+
+        return std::make_pair(trig_t_x1_clean, trig_t_x5_clean); }, nb::arg("trig_t_x1").noconvert(), nb::arg("trig_t_x5").noconvert());
 }
