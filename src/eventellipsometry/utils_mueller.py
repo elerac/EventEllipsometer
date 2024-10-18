@@ -1,9 +1,10 @@
 import polanalyser as pa
 import numpy as np
 import cv2
+from typing import Sequence
 
 
-def mueller_image(M: np.ndarray, colormap: str = "RdBu", text_type: str = "median", block_size: int = 64, border: int = 2) -> np.ndarray:
+def mueller_image(M: np.ndarray, colormap: str = "RdBu", text_type: str = "median", block_size: int = 64, border: int = 2, color_nan: Sequence[int] = (128, 128, 128)) -> np.ndarray:
     """Visualize the Mueller matrix as an image.
 
     Parameters
@@ -18,6 +19,8 @@ def mueller_image(M: np.ndarray, colormap: str = "RdBu", text_type: str = "media
         The size of the block. This is used when the input matrix is 1x1. The default is 64.
     border : int, optional
         The border size. The default is 2.
+    color_nan : Sequence[int], optional
+        The color for NaN values. The default is (128, 128, 128).
 
     Returns
     -------
@@ -47,7 +50,7 @@ def mueller_image(M: np.ndarray, colormap: str = "RdBu", text_type: str = "media
     # Apply color map
     M_vis = pa.applyColorMap(M, colormap, -1, 1)
 
-    M_vis[np.isnan(M)] = (128, 128, 128)  # Set invalid values to gray
+    M_vis[np.isnan(M)] = color_nan  # Set invalid values to gray
 
     # Write number in text for each block at the center
     if text_type != "none":
