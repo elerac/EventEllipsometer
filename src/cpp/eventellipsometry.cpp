@@ -42,12 +42,6 @@ Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
     // Count number of data points
     size_t num = theta.size();
 
-    // Return nan if there are not enough data points
-    if (num < 15)
-    {
-        return Eigen::Vector<float, 16>::Constant(16, std::numeric_limits<float>::quiet_NaN());
-    }
-
     auto [pn, pd] = calculate_ndcoffs(theta, phi1, phi2);
 
     // Construct matrix A for SVD
@@ -194,6 +188,9 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes,
         std::cout << "  " << "tol: " << tol << std::endl;
     }
 
+    Eigen::Vector<float, 16> m_depolarizer = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    Eigen::Vector<float, 16> m_nan = Eigen::Vector<float, 16>::Constant(16, std::numeric_limits<float>::quiet_NaN());
+
     start = std::chrono::system_clock::now();
     for (int iz = 0; iz < num_frames; ++iz)
     {
@@ -204,7 +201,21 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes,
             for (int ix = 0; ix < width; ++ix)
             {
                 auto [theta, dlogI, weights, phi_offset] = dataframe.get(ix, iy);
-                Eigen::Vector<float, 16> m = fit_mueller_svd(theta, dlogI, phi1, phi2 - 5 * phi_offset, max_iter_svd, tol, weights);
+                Eigen::Vector<float, 16> m;
+                size_t num_theta = theta.size();
+                if (num_theta == 0) // No event
+                {
+                    // m = Eigen::Vector<float, 16>::Constant(16, std::numeric_limits<float>::quiet_NaN());
+                    m = m_nan;
+                }
+                else if (num_theta < 15) // Not enough events
+                {
+                    m = m_depolarizer;
+                }
+                else // Enough events
+                {
+                    m = fit_mueller_svd(theta, dlogI, phi1, phi2 - 5 * phi_offset, max_iter_svd, tol, weights);
+                }
                 video_mueller(iz, iy, ix) = m;
             }
         }
