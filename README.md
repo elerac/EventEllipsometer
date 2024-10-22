@@ -29,7 +29,9 @@ To render the synthetic data, [Mitsuba3](https://github.com/mitsuba-renderer/mit
 
 The scene files (3D model, pbsdf) need to be prepared in the `scenes` directory. 
 
-- [bunny.ply](https://github.com/mitsuba-renderer/mitsuba-tutorials/blob/master/scenes/meshes/bunny.ply)
+- [bunny.ply](https://www.dropbox.com/scl/fi/jv8ncz9jrej1vc22ar9d2/20180310_KickAir8P_UVUnwrapped_Stanford_Bunny_OBJ-JPG.zip?rlkey=l8nczue360jrq3o5y79k9nzjh&e=1&dl=0)
+  - As the original model does not have the UV mapping, the UV-mapped model is provided at [here](https://blenderartists.org/t/uv-unwrapped-stanford-bunny-happy-spring-equinox/1101297).
+  - I convert this model to the PLY format by using Blender.
 - [pbsdf](https://vclab.kaist.ac.kr/siggraph2020/pbrdfdataset/kaistdataset.html)
 
 ```bash
@@ -102,3 +104,13 @@ The trigger is generated when Arduino detects the encoder signal (two times per 
 - Note that the Arduino's HIGH/LOW states are reversed in the event camera.
   - Arduino: digitalWrite(pin, HIGH); -> Event Camera: trig_p = 0
   - Arduino: digitalWrite(pin, LOW);  -> Event Camera: trig_p = 1
+
+
+## MM evaluation
+relative Frobenius distance
+
+Aiello, Maximum-likelihood estimation of Mueller matrices, OPTICS LETTERS 2005.
+
+$
+\frac{||m - m^*||}{||m + m^*||}
+$
