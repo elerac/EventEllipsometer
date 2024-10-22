@@ -7,6 +7,7 @@ import polanalyser as pa
 import eventellipsometry as ee
 from recordings.filenames import filename_raw
 import calib
+import visualize
 
 
 def main():
@@ -157,19 +158,7 @@ def main():
     np.save(filename_npy, video_mm)
     print(f"  npy: {filename_npy}")
 
-    # Crop ROI
-    img_is_nan = np.isnan(video_mm).all(axis=(0, 3, 4))
-    y0, y1 = np.where(~img_is_nan)[0][[0, -1]]
-    x0, x1 = np.where(~img_is_nan)[1][[0, -1]]
-    video_mm = video_mm[:, y0:y1, x0:x1]
-
-    img_mueller_vis_list = [ee.mueller_image(pa.gammaCorrection(video_mm[i], 1 / 1), text_type="none", border=0, color_nan=(255, 255, 255)) for i in range(len(video_mm))]
-    for i, img_mueller_vis in enumerate(img_mueller_vis_list):
-        cv2.imwrite(f"{dir_dst}/{filename_dst_stem}_{i:04d}.png", img_mueller_vis)
-
-    # img_mueller_vis_grid = pa.makeGrid(img_mueller_vis_list[:4], border=10, border_color=(255, 255, 255))
-    # img_mueller_vis_grid = cv2.resize(img_mueller_vis_grid, None, fx=0.5, fy=0.5)
-    # cv2.imwrite("grid.jpg", img_mueller_vis_grid)
+    visualize.visualize_mueller_video(filename_npy)
 
 
 if __name__ == "__main__":
