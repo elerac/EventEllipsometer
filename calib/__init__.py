@@ -1,5 +1,6 @@
 import numpy as np
 from pathlib import Path
+from .refractory_period.table import refractory_period
 
 parent = f"{Path(__file__).parent}"
 
