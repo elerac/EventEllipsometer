@@ -74,18 +74,26 @@ def run_worker():
     print(f"Date and time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"    Arguments: output={args.output}, values[0]={args.values[0]:.3f}, values[-1]={args.values[-1]:.3f}, len(values)={len(args.values)}")
 
-    pbrdf_blue_biliard = mi.load_dict(
+    pbrdf_blue_silicone = mi.load_dict(
         {
             "type": "measured_polarized",
-            "filename": "scenes/pbsdf/9_blue_billiard_mitsuba/9_blue_billiard_inpainted.pbsdf",
+            "filename": "scenes/pbsdf/24_blue_silicone_mitsuba/24_blue_silicon_inpainted.pbsdf",
             "alpha_sample": 0.2,
         }
     )
 
-    pbrdf_ochar_silicone = mi.load_dict(
+    pbrdf_spectralon = mi.load_dict(
         {
             "type": "measured_polarized",
-            "filename": "scenes/pbsdf/20_ocher_silicone_mitsuba/20_ocher_silicon_inpainted.pbsdf",
+            "filename": "scenes/pbsdf/1_spectralon_mitsuba/1_spectralon_inpainted.pbsdf",
+            "alpha_sample": 0.2,
+        }
+    )
+
+    pbrdf_brass = mi.load_dict(
+        {
+            "type": "measured_polarized",
+            "filename": "scenes/pbsdf/5_brass_mitsuba/5_brass_inpainted.pbsdf",
             "alpha_sample": 0.2,
         }
     )
@@ -96,10 +104,7 @@ def run_worker():
         scene = mi.load_dict(
             {
                 "type": "scene",
-                "integrator": {
-                    "type": "stokes",
-                    "nested": {"type": "volpath", "max_depth": -1},
-                },
+                "integrator": {"type": "stokes", "nested": {"type": "volpath", "max_depth": -1}},
                 "sensor": {
                     "type": "perspective",
                     "to_world": mi.ScalarTransform4f.look_at(origin=[0, 0, 50], target=[0, 0, 0], up=[0, 1, 0]),
@@ -107,65 +112,23 @@ def run_worker():
                     # "to_world": mi.ScalarTransform4f.look_at(origin=[200, 100, 600], target=[100, 0, 500], up=[0, 1, 0]),
                     "fov": 4,
                     # "fov": 100,
-                    "film": {"type": "hdrfilm", "width": 346 // 4, "height": 260 // 4},
+                    "film": {"type": "hdrfilm", "width": 346 // 8, "height": 260 // 8},
                 },
-                # "constant_emitter": {
-                #     "type": "constant",
-                #     "radiance": {
-                #         "type": "spectrum",
-                #         "value": 1,
-                #     },
-                # },
-                # "sphere1": {
-                #     "type": "sphere",
-                #     "center": [0, 0, 0],
-                #     "radius": 1.0,
-                #     "to_world": mi.ScalarTransform4f.rotate([1, 0, 0], 90),
-                #     # "bsdf": {
-                #     #     "type": "measured_polarized",
-                #     #     "filename": "pbsdf/9_blue_billiard_mitsuba/9_blue_billiard_inpainted.pbsdf",
-                #     #     "alpha_sample": 0.2,
-                #     # },
-                #     "bsdf": {
-                #         "type": "blendbsdf",
-                #         "weight": {
-                #             "type": "checkerboard",
-                #             "color0": 0.0,
-                #             "color1": 1.0,
-                #             "to_uv": mi.ScalarTransform4f.scale(3),
-                #         },
-                #         "bsdf_0": {
-                #             "type": "measured_polarized",
-                #             "filename": "pbsdf/20_ocher_silicone_mitsuba/20_ocher_silicon_inpainted.pbsdf",
-                #             "alpha_sample": 0.2,
-                #         },
-                #         "bsdf_1": {
-                #             "type": "measured_polarized",
-                #             "filename": "pbsdf/19_mint_silicone_mitsuba/19_mint_silicon_inpainted.pbsdf",
-                #             "alpha_sample": 0.2,
-                #         },
-                #     },
-                # },
                 "plane1": {
                     "type": "rectangle",
                     "to_world": mi.ScalarTransform4f.translate([0, 0, -10]) @ mi.ScalarTransform4f.scale(5),
-                    "bsdf": pbrdf_ochar_silicone,
+                    "bsdf": pbrdf_spectralon,
                 },
-                # "plane2": {
-                #     "type": "rectangle",
-                #     "to_world": mi.ScalarTransform4f.translate([0, -3, 0]) @ mi.ScalarTransform4f.rotate([1, 0, 0], 85) @ mi.ScalarTransform4f.scale(5),
-                #     "bsdf": {
-                #         "type": "measured_polarized",
-                #         "filename": "pbsdf/15_white_silicone_mitsuba/15_white_silicon_inpainted.pbsdf",
-                #         "alpha_sample": 0.2,
-                #     },
-                # },
                 "bunny": {
                     "type": "ply",
-                    "filename": "scenes/meshes/bunny.ply",
-                    "to_world": mi.ScalarTransform4f.translate([0, -0.25, 0]) @ mi.ScalarTransform4f.scale(14),
-                    # "to_world": mi.ScalarTransform4f.translate([(t - 0.5) * 0.5, 0, 0]) @ mi.ScalarTransform4f.translate([0, -0.25, 0]) @ mi.ScalarTransform4f.scale(14),
-                    "bsdf": pbrdf_blue_biliard,
+                    "filename": "scenes/meshes/bunny_uv.ply",
+                    "to_world": mi.ScalarTransform4f.translate([0.35, -1.22, 0]) @ mi.ScalarTransform4f.scale(13.3) @ mi.ScalarTransform4f.rotate([1, 0, 0], -90),
+                    "bsdf": {
+                        "type": "blendbsdf",
+                        "weight": {"type": "checkerboard", "color0": 0.0, "color1": 1.0, "to_uv": mi.ScalarTransform4f.scale(5)},
+                        "bsdf_0": pbrdf_blue_silicone,
+                        "bsdf_1": pbrdf_brass,
+                    },
                 },
             }
             | pprojector(image, 90, 1000000, [100, 0, 500], [0, 0, 0], [0, 1, 0], np.rad2deg(theta), delta=50)
@@ -173,14 +136,11 @@ def run_worker():
         return scene
 
     scene = load_scene()
-    # params = mi.traverse(scene)
-    # print(params)
 
     mi.set_log_level(mi.LogLevel.Error)
 
     time_min = 0
     time_max = 1 / 60  # * #20
-    # num = 180 * 50  # * 20  # // 10000
     img_list = []
     mm_psa_list = []
     mm_psg_list = []
@@ -192,27 +152,6 @@ def run_worker():
 
         scene = load_scene(theta, t)
 
-        # params = mi.traverse(scene)
-
-        # if i == 0:
-        #     bunny_vpos_init = np.array(params["bunny.vertex_positions"])
-
-        # bunny_vpos = np.array(params["bunny.vertex_positions"])
-        # bunny_vpos = np.zeros_like(bunny_vpos, dtype=np.float32)
-        # bunny_vpos[0::3] = (t - 0.5) * 0.5  # x
-        # # bunny_vpos[1::3] = 0  # y
-        # # bunny_vpos[2::3] = 0  # z
-
-        # is_cuda = "cuda" in mi.variant()
-        # if is_cuda:
-        #     bunny_vpos = dr.cuda.Float(bunny_vpos + bunny_vpos_init)
-        # else:
-        #     bunny_vpos = dr.scalar.ArrayXf(bunny_vpos + bunny_vpos_init)
-
-        # params["bunny.vertex_positions"] = bunny_vpos
-        # params["qwp_projector.bsdf.theta.value"] = np.rad2deg(theta)
-        # params.update()
-
         image = mi.render(scene, spp=256)
 
         # Conver bitmap to ndarray
@@ -223,26 +162,6 @@ def run_worker():
         for si in range(4):
             img_rgb_stokes[..., si] = channels[f"S{si}"]
         img_bgr_stokes = img_rgb_stokes[..., ::-1, :]
-
-        # img_bgr = img_bgr_stokes[..., 0]
-        # img_stokes = img_bgr_stokes[..., 1, :]
-        # img_aolp = pa.cvtStokesToAoLP(img_stokes)
-        # img_dolp = pa.cvtStokesToDoLP(img_stokes)
-        # img_docp = pa.cvtStokesToDoCP(img_stokes)
-        # img_dop = pa.cvtStokesToDoP(img_stokes)
-        # img_ellipticity_angle = pa.cvtStokesToEllipticityAngle(img_stokes)
-        # img_bgr_vis = np.clip(img_bgr ** (1 / 2.2) * 255, 0, 255).astype(np.uint8)
-        # img_aolp_vis = pa.applyColorToAoLP(img_aolp)
-        # img_top_vis = pa.applyColorToToP(img_ellipticity_angle, img_dop)
-        # img_cop_vis = pa.applyColorToCoP(img_ellipticity_angle, img_docp)
-        # img_dop_vis = pa.applyColorToDoP(img_dop)
-        # img_dolp_vis = pa.applyColorToDoP(img_dolp)
-        # img_docp_vis = pa.applyColorToDoP(img_docp)
-        # img_grid = pa.makeGrid([img_bgr_vis, img_aolp_vis, img_top_vis, img_cop_vis, img_dop_vis, img_dolp_vis, img_docp_vis], 2)
-        # img_grid = cv2.resize(img_grid, (0, 0), fx=8, fy=8, interpolation=cv2.INTER_NEAREST)
-        # cv2.putText(img_grid, f"theta: {np.rad2deg(theta):.1f} [deg]", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-        # cv2.imshow("grid", img_grid)
-        # cv2.waitKey(1)
 
         # img_bgr_stokes = render(theta)  # (height, width, 3, 4)
         mm_psg = pa.qwp(theta) @ pa.polarizer(0)  # (4, 4)
@@ -264,7 +183,6 @@ def run_coordinator():
     filename_py = __file__
 
     num = 180 * 100  # * 20
-    num = 100
     chunk_size = 1000
 
     print(f"Start running Mitsuba3 renderer. {time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -311,7 +229,7 @@ def run_coordinator():
     print("Number of images: ", len(imlist))
     print("Keys in props: ", props.keys())
 
-    pa.imwriteMultiple("rendered/bunny", np.array(imlist), **props)
+    pa.imwriteMultiple("rendered/bunny3", np.array(imlist), **props)
 
     print(f"Total elapsed time: {(time.time() - time_start) / 3600:.2f} [h]")
 
