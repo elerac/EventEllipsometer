@@ -33,6 +33,14 @@ int trigState = LOW;
 void updatePeriod_x1()
 {
     static bool flag = true;
+
+    // Trigger
+    if (trigState == LOW)
+    {
+        trigState = HIGH;
+        digitalWrite(pinOut_trig, trigState);
+    }
+ 
     if (flag)
     {
         unsigned long t_now = micros();
@@ -41,18 +49,19 @@ void updatePeriod_x1()
         count_x1++;
     }
     flag = !flag;
-
-    // Trigger
-    if (trigState == LOW)
-    {
-        trigState = HIGH;
-        digitalWrite(pinOut_trig, trigState);
-    }
 }
 
 void updatePeriod_x5()
 {
     static bool flag = true;
+
+    // Trigger
+    if (trigState == HIGH)
+    {
+        trigState = LOW;
+        digitalWrite(pinOut_trig, trigState);
+    }
+
     if (flag)
     {
         unsigned long t_now = micros();
@@ -61,13 +70,6 @@ void updatePeriod_x5()
         count_x5++;
     }
     flag = !flag;
-
-    // Trigger
-    if (trigState == HIGH)
-    {
-        trigState = LOW;
-        digitalWrite(pinOut_trig, trigState);
-    }
 }
 
 void setup()
