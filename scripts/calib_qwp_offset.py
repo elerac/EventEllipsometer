@@ -73,8 +73,10 @@ def main():
     # phi2 = np.loadtxt(filename_phi2, comments="%")
 
     # Visualize the error map
-    vmin = np.percentile(img_error, 1)
-    vmax = np.percentile(img_error, 99)
+    # vmin = np.percentile(img_error, 1)
+    # vmax = np.percentile(img_error, 99)
+    vmin = np.min(img_error)
+    vmax = np.max(img_error)
     print(f"vmin: {vmin}, vmax: {vmax}")
     img_error_vis = pa.applyColorMap(img_error, "jet", vmin=vmin, vmax=vmax)
     filename_png = "calib/qwp_offset/qwp_offset_error.png"
