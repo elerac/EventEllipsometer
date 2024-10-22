@@ -103,7 +103,8 @@ std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::Vector
                                                              const Eigen::VectorX<int64_t> &trig_t,
                                                              const Eigen::VectorX<int16_t> &trig_p,
                                                              const Eigen::MatrixX<float> &img_C_on,
-                                                             const Eigen::MatrixX<float> &img_C_off)
+                                                             const Eigen::MatrixX<float> &img_C_off,
+                                                             int64_t t_refr = 0)
 {
 
     // Triggers
@@ -189,8 +190,9 @@ std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::Vector
                     continue;
                 }
 
-                // time to theta (0 to pi)
+                // time to theta (0 to pi): theta = (t - t_min) / (t_max - t_min) * pi
                 Eigen::VectorXf _theta = (_t.cast<float>() - Eigen::VectorXf::Constant(_t.size(), t_min).cast<float>()) / static_cast<float>(t_max - t_min) * M_PI;
+                float theta_refr = static_cast<float>(t_refr) / static_cast<float>(t_max - t_min) * M_PI;
 
                 // theta_diff = np.convolve(theta, np.array([1, -1]), mode="valid")
                 // theta = np.convolve(theta, np.array([0.5, 0.5]), mode="valid")
@@ -211,7 +213,7 @@ std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::Vector
                     }
                     bool is_on = _p(i + 1) > 0;
                     float C = is_on ? img_C_on(iy, ix) : img_C_off(iy, ix);
-                    vec_dlogI.push_back(1.0f / theta_diff * C);
+                    vec_dlogI.push_back(1.0f / std::max(theta_diff - theta_refr, 1e-12f) * C);
 
                     // theta
                     vec_theta.push_back((_theta(i) + _theta(i + 1)) * 0.5f);
@@ -232,20 +234,4 @@ std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::Vector
     }
 
     return ellipsometry_eventmaps;
-}
-
-std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::VectorX<uint16_t> &x,
-                                                             const Eigen::VectorX<uint16_t> &y,
-                                                             const Eigen::VectorX<int64_t> &t,
-                                                             const Eigen::VectorX<int16_t> &p,
-                                                             int width,
-                                                             int height,
-                                                             const Eigen::VectorX<int64_t> &trig_t,
-                                                             const Eigen::VectorX<int16_t> &trig_p,
-                                                             float C_on,
-                                                             float C_off)
-{
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> img_C_on = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>::Constant(height, width, C_on);
-    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> img_C_off = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>::Constant(height, width, C_off);
-    return construct_dataframes(x, y, t, p, width, height, trig_t, trig_p, img_C_on, img_C_off);
 }

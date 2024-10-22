@@ -42,12 +42,6 @@ Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
     // Count number of data points
     size_t num = theta.size();
 
-    // Return nan if there are not enough data points
-    if (num < 15)
-    {
-        return Eigen::Vector<float, 16>::Constant(16, std::numeric_limits<float>::quiet_NaN());
-    }
-
     auto [pn, pd] = calculate_ndcoffs(theta, phi1, phi2);
 
     // Construct matrix A for SVD
@@ -194,6 +188,9 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes,
         std::cout << "  " << "tol: " << tol << std::endl;
     }
 
+    Eigen::Vector<float, 16> m_depolarizer = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    Eigen::Vector<float, 16> m_nan = Eigen::Vector<float, 16>::Constant(16, std::numeric_limits<float>::quiet_NaN());
+
     start = std::chrono::system_clock::now();
     for (int iz = 0; iz < num_frames; ++iz)
     {
@@ -204,7 +201,21 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes,
             for (int ix = 0; ix < width; ++ix)
             {
                 auto [theta, dlogI, weights, phi_offset] = dataframe.get(ix, iy);
-                Eigen::Vector<float, 16> m = fit_mueller_svd(theta, dlogI, phi1, phi2 - 5 * phi_offset, max_iter_svd, tol, weights);
+                Eigen::Vector<float, 16> m;
+                size_t num_theta = theta.size();
+                if (num_theta == 0) // No event
+                {
+                    // m = Eigen::Vector<float, 16>::Constant(16, std::numeric_limits<float>::quiet_NaN());
+                    m = m_nan;
+                }
+                else if (num_theta < 15) // Not enough events
+                {
+                    m = m_depolarizer;
+                }
+                else // Enough events
+                {
+                    m = fit_mueller_svd(theta, dlogI, phi1, phi2 - 5 * phi_offset, max_iter_svd, tol, weights);
+                }
                 video_mueller(iz, iy, ix) = m;
             }
         }
@@ -278,7 +289,8 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes,
                         // Update the Mueller matrix via propagation
                         // std::vector<std::pair<int, int>> neighbors = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-5, 0}, {5, 0}, {0, -5}, {0, 5}};
 
-                        std::vector<std::tuple<int, int, int>> neighbors = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {-5, 0, 0}, {5, 0, 0}, {0, -5, 0}, {0, 5, 0}, {0, 0, -1}, {0, 0, 1}};
+                        // std::vector<std::tuple<int, int, int>> neighbors = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {-5, 0, 0}, {5, 0, 0}, {0, -5, 0}, {0, 5, 0}, {0, 0, -1}, {0, 0, 1}};
+                        std::vector<std::tuple<int, int, int>> neighbors = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {-5, 0, 0}, {5, 0, 0}, {0, -5, 0}, {0, 5, 0}, {2, -1, 0}, {2, 1, 0}, {2, 0, -1}, {2, 0, 1}, {1, 2, 0}, {1, -2, 0}, {0, 2, 1}, {0, 2, -1}, {3, 0, 0}, {-3, 0, 0}, {0, 3, 0}, {0, -3, 0}, {0, 0, -1}, {0, 0, 1}};
                         for (auto [dx, dy, dz] : neighbors)
                         {
                             int iy_ = iy + dy;
@@ -370,10 +382,13 @@ NB_MODULE(_eventellipsometry_impl, m)
         .def("get", &EventEllipsometryDataFrame::get, nb::arg("x"), nb::arg("y"))
         .def("shape", &EventEllipsometryDataFrame::shape, nb::arg("i"));
 
-    m.def("construct_dataframes", [](const nb::DRef<Eigen::VectorX<uint16_t>> &x, const nb::DRef<Eigen::VectorX<uint16_t>> &y, const nb::DRef<Eigen::VectorX<int64_t>> &t, const nb::DRef<Eigen::VectorX<int16_t>> &p, int width, int height, const nb::DRef<Eigen::VectorX<int64_t>> &trig_t, const nb::DRef<Eigen::VectorX<int16_t>> &trig_p, const nb::DRef<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> &img_C_on, const nb::DRef<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> &img_C_off)
-          { return construct_dataframes(x, y, t, p, width, height, trig_t, trig_p, img_C_on, img_C_off); }, nb::arg("x").noconvert(), nb::arg("y").noconvert(), nb::arg("t").noconvert(), nb::arg("p").noconvert(), nb::arg("width"), nb::arg("height"), nb::arg("trig_t").noconvert(), nb::arg("trig_p").noconvert(), nb::arg("img_C_on").noconvert(), nb::arg("img_C_off").noconvert());
-    m.def("construct_dataframes", [](const nb::DRef<Eigen::VectorX<uint16_t>> &x, const nb::DRef<Eigen::VectorX<uint16_t>> &y, const nb::DRef<Eigen::VectorX<int64_t>> &t, const nb::DRef<Eigen::VectorX<int16_t>> &p, int width, int height, const nb::DRef<Eigen::VectorX<int64_t>> &trig_t, const nb::DRef<Eigen::VectorX<int16_t>> &trig_p, float C_on, float C_off)
-          { return construct_dataframes(x, y, t, p, width, height, trig_t, trig_p, C_on, C_off); }, nb::arg("x").noconvert(), nb::arg("y").noconvert(), nb::arg("t").noconvert(), nb::arg("p").noconvert(), nb::arg("width"), nb::arg("height"), nb::arg("trig_t").noconvert(), nb::arg("trig_p").noconvert(), nb::arg("C_on"), nb::arg("C_off"));
+    m.def("construct_dataframes", [](const nb::DRef<Eigen::VectorX<uint16_t>> &x, const nb::DRef<Eigen::VectorX<uint16_t>> &y, const nb::DRef<Eigen::VectorX<int64_t>> &t, const nb::DRef<Eigen::VectorX<int16_t>> &p, int width, int height, const nb::DRef<Eigen::VectorX<int64_t>> &trig_t, const nb::DRef<Eigen::VectorX<int16_t>> &trig_p, const nb::DRef<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> &img_C_on, const nb::DRef<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> &img_C_off, int64_t t_refr = 0)
+          { return construct_dataframes(x, y, t, p, width, height, trig_t, trig_p, img_C_on, img_C_off, t_refr); }, nb::arg("x").noconvert(), nb::arg("y").noconvert(), nb::arg("t").noconvert(), nb::arg("p").noconvert(), nb::arg("width"), nb::arg("height"), nb::arg("trig_t").noconvert(), nb::arg("trig_p").noconvert(), nb::arg("img_C_on").noconvert(), nb::arg("img_C_off").noconvert(), nb::arg("t_refr") = 0);
+    m.def("construct_dataframes", [](const nb::DRef<Eigen::VectorX<uint16_t>> &x, const nb::DRef<Eigen::VectorX<uint16_t>> &y, const nb::DRef<Eigen::VectorX<int64_t>> &t, const nb::DRef<Eigen::VectorX<int16_t>> &p, int width, int height, const nb::DRef<Eigen::VectorX<int64_t>> &trig_t, const nb::DRef<Eigen::VectorX<int16_t>> &trig_p, float C_on, float C_off, int64_t t_refr = 0)
+          {
+              Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> img_C_on = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>::Constant(height, width, C_on);
+              Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> img_C_off = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>::Constant(height, width, C_off);
+              return construct_dataframes(x, y, t, p, width, height, trig_t, trig_p, img_C_on, img_C_off, t_refr); }, nb::arg("x").noconvert(), nb::arg("y").noconvert(), nb::arg("t").noconvert(), nb::arg("p").noconvert(), nb::arg("width"), nb::arg("height"), nb::arg("trig_t").noconvert(), nb::arg("trig_p").noconvert(), nb::arg("C_on"), nb::arg("C_off"), nb::arg("t_refr") = 0);
 
     m.def("clean_triggers", &clean_triggers, nb::arg("trig_t_x1").noconvert(), nb::arg("trig_t_x5").noconvert());
     m.def("clean_triggers", [](const nb::DRef<Eigen::VectorX<int64_t>> &trig_t_x1, const nb::DRef<Eigen::VectorX<int64_t>> &trig_t_x5)
