@@ -37,6 +37,7 @@ def main():
         img_C_off = -C
         phi1 = 0
         phi2 = 0
+        t_refr = 0
         print("Thresholds")
         print(f"  Con : {C:.3f}")
         print(f"  Coff: {-C:.3f}")
