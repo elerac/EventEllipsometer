@@ -82,40 +82,56 @@ def read_event(filepath: Union[str, Path], filepath_bias: Optional[str] = None) 
         if filepath_bias is not None:
             warnings.warn("filepath_bias is ignored when reading .npz file")
         data_npz = np.load(filepath)
-        data = {k: data_npz[k] for k in data_npz.files}  # Convert to dict
+        to_scalar_if_possible = lambda x: x.item() if np.ndim(x) == 0 else x
+        data = {k: to_scalar_if_possible(data_npz[k]) for k in data_npz.files}  # Convert to dict
     else:
         raise ValueError(f"Unsupported file format: '{suffix}'")
 
     return data
 
 
-def write_event(
-    filepath: str,
-    x: npt.ArrayLike,
-    y: npt.ArrayLike,
-    p: npt.ArrayLike,
-    t: npt.ArrayLike,
-    width: int = 1,
-    height: int = 1,
-    trigger: npt.ArrayLike = [],
-    **metadata,
-) -> None:
-    suffix = Path(filepath).suffix
+def write_event(filename_npz: Union[str, Path], x: npt.ArrayLike, y: npt.ArrayLike, p: npt.ArrayLike, t: npt.ArrayLike, **metadata):
+    """Save event data as npz file
+
+    Parameters
+    ----------
+    filename_npz : Union[str, Path]
+        Filename to save as npz file
+    x : npt.ArrayLike
+        x-coordinate of events
+    y : npt.ArrayLike
+        y-coordinate of events
+    p : npt.ArrayLike
+        Polarity of events
+    t : npt.ArrayLike
+        Timestamp of events
+    metadata : Dict[str, Any]
+        Metadata to save as npz file
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = np.array([1, 2, 3], dtype=np.uint16)
+    >>> y = np.array([4, 5, 6], dtype=np.uint16)
+    >>> p = np.array([1, 0, 1], dtype=np.int16)
+    >>> t = np.array([100, 200, 300], dtype=np.int64)
+    >>> write_event("test.npz", x, y, p, t, width=640, height=480)
+    >>> events = np.load("test.npz")
+    >>> print(events.files)
+    ['x', 'y', 'p', 't', 'width', 'height']
+    """
+    filename_npz = Path(filename_npz)
+    suffix = filename_npz.suffix
 
     # Add .npz if suffix is not provided
-    if suffix == "":
-        suffix = ".npz"
-        filepath += suffix
-
-    # Check if the suffix is supported
     if suffix != ".npz":
-        raise ValueError(f"Unsupported file format: {suffix}")
+        filename_npz.with_suffix(".npz")
 
     # Save as npzs
-    Path(filepath).parent.mkdir(parents=True, exist_ok=True)
-    data = {"x": x, "y": y, "p": p, "t": t, "width": width, "height": height, "trigger": trigger}
+    filename_npz.parent.mkdir(parents=True, exist_ok=True)
+    data = {"x": x, "y": y, "p": p, "t": t}
     data.update(metadata)
-    np.savez_compressed(filepath, **data)
+    np.savez_compressed(filename_npz, **data)
 
 
 def main():
