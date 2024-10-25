@@ -212,8 +212,6 @@ def run_coordinator():
     props = {}
     for i in range(num_split):
         images_i, props_i = pa.imreadMultiple(f"output{i}")
-        # Delete the folder "output{i}" and its contents
-        shutil.rmtree(f"output{i}")
 
         imlist = imlist + images_i.tolist()
         # for all keys in props
@@ -229,7 +227,11 @@ def run_coordinator():
     print("Number of images: ", len(imlist))
     print("Keys in props: ", props.keys())
 
-    pa.imwriteMultiple("rendered/bunny3", np.array(imlist), **props)
+    pa.imwriteMultiple("rendered/bunny5", np.array(imlist), **props)
+
+    for i in range(num_split):
+        # Delete the folder "output{i}" and its contents
+        shutil.rmtree(f"output{i}")
 
     print(f"Total elapsed time: {(time.time() - time_start) / 3600:.2f} [h]")
 
