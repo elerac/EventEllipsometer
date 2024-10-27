@@ -240,13 +240,10 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes,
 
     start = std::chrono::system_clock::now();
 
-    srand(0); // Set random seed for reproducibility
     for (int iter = 0; iter < max_iter_propagate; ++iter)
     {
-
         for (int i_red_black = 0; i_red_black < 2; ++i_red_black) // Red: 0, Black: 1
         {
-
             for (int iz = 0; iz < num_frames; ++iz)
             {
                 auto &dataframe = dataframes[iz];
