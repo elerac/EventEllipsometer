@@ -316,7 +316,8 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes,
                         }
 
                         // Refine the Mueller matrix via random perturbation
-                        Eigen::Vector<float, 16> m_perturbed = filter_mueller(perturb_mueller(m_best));
+                        int seed = ix + iy * width + iz * width * height + i_red_black * width * height * num_frames + iter * width * height * num_frames * 2; // Unique seed for reproducibility
+                        Eigen::Vector<float, 16> m_perturbed = filter_mueller(perturb_mueller(m_best, 0.01, seed));
                         float loss = loss_func(m_perturbed);
                         if (loss < loss_best)
                         {

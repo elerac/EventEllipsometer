@@ -56,11 +56,12 @@ Eigen::Vector<float, 16> filter_mueller(const Eigen::Vector<float, 16> &m)
     return m_;
 }
 
-std::mt19937 gen(0); // Globally fixed seed for reproducibility
+// std::mt19937 gen(0); // Globally fixed seed for reproducibility
 
-Eigen::Vector<float, 16> perturb_mueller(const Eigen::Vector<float, 16> &m, float sigma = 0.01)
+Eigen::Vector<float, 16> perturb_mueller(const Eigen::Vector<float, 16> &m, float sigma = 0.01, int seed = std::random_device{}())
 {
     // Generate perturbed Mueller matrix via random perturbation
+    std::mt19937 gen(seed);
     std::normal_distribution<float> dist(1.0, sigma); // Centered at 1.0 with standard deviation sigma
     Eigen::Vector<float, 16> m_;
     m_(0) = m(0); // Do not perturb the first element
