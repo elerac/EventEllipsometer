@@ -35,7 +35,7 @@ Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
                                          const Eigen::VectorXf &dlogI,
                                          float phi1,
                                          float phi2,
-                                         int max_iter = 10,
+                                         int max_iter = 5,
                                          float tol = 1e-2,
                                          const std::optional<Eigen::VectorXf> &weights = std::nullopt)
 {
@@ -153,7 +153,7 @@ Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
 auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes,
                  float phi1,
                  float phi2,
-                 int max_iter_svd = 10,
+                 int max_iter_svd = 5,
                  float tol = 1e-2,
                  int max_iter_propagate = 10,
                  bool verbose = false)
@@ -240,13 +240,10 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes,
 
     start = std::chrono::system_clock::now();
 
-    srand(0); // Set random seed for reproducibility
     for (int iter = 0; iter < max_iter_propagate; ++iter)
     {
-
         for (int i_red_black = 0; i_red_black < 2; ++i_red_black) // Red: 0, Black: 1
         {
-
             for (int iz = 0; iz < num_frames; ++iz)
             {
                 auto &dataframe = dataframes[iz];
@@ -316,7 +313,8 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes,
                         }
 
                         // Refine the Mueller matrix via random perturbation
-                        Eigen::Vector<float, 16> m_perturbed = filter_mueller(perturb_mueller(m_best));
+                        int seed = ix + iy * width + iz * width * height + i_red_black * width * height * num_frames + iter * width * height * num_frames * 2; // Unique seed for reproducibility
+                        Eigen::Vector<float, 16> m_perturbed = filter_mueller(perturb_mueller(m_best, 0.01, seed));
                         float loss = loss_func(m_perturbed);
                         if (loss < loss_best)
                         {
@@ -357,9 +355,9 @@ NB_MODULE(_eventellipsometry_impl, m)
     m.def("svdSolve", [](const nb::DRef<Eigen::Matrix<float, Eigen::Dynamic, 16>> &A)
           { return svdSolve<float, 16>(A); }, nb::arg("A").noconvert(), "Solve Ax = 0\n\nParameters\n----------\nA : numpy.ndarray\n    Matrix A. (n, m)\n\nReturns\n-------\nx : numpy.ndarray\n    Solution x. (m,). The x is normalized by first element.");
 
-    m.def("fit_mueller_svd", &fit_mueller_svd<true>, nb::arg("theta").noconvert(), nb::arg("dlogI").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("max_iter") = 10, nb::arg("tol") = 1e-2, nb::arg("weights").none());
+    m.def("fit_mueller_svd", &fit_mueller_svd<true>, nb::arg("theta").noconvert(), nb::arg("dlogI").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("max_iter") = 5, nb::arg("tol") = 1e-2, nb::arg("weights").none());
 
-    m.def("fit_mueller", &fit_mueller, nb::arg("dataframes").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("max_iter_svd") = 10, nb::arg("tol") = 1e-2, nb::arg("max_iter_propagate") = 10, nb::arg("verbose") = false, "Fit Mueller matrix video.\n\nParameters\n----------\ndataframes : list of EventEllipsometryDataFrame\n    List of EventEllipsometryDataFrame.\nphi1 : float\n    Phi1.\nphi2 : float\n    Phi2.\nmax_iter_svd : int\n    Maximum number of iterations for SVD.\ntol : float\n    Tolerance for convergence.\nmax_iter_propagate : int\n    Maximum number of iterations for propagation.\nverbose : bool\n    Verbose mode.\n\nReturns\n-------\nvideo_mueller : numpy.ndarray\n    Video Mueller matrix. (num_frames, height, width, 4, 4)");
+    m.def("fit_mueller", &fit_mueller, nb::arg("dataframes").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("max_iter_svd") = 5, nb::arg("tol") = 1e-2, nb::arg("max_iter_propagate") = 10, nb::arg("verbose") = false, "Fit Mueller matrix video.\n\nParameters\n----------\ndataframes : list of EventEllipsometryDataFrame\n    List of EventEllipsometryDataFrame.\nphi1 : float\n    Phi1.\nphi2 : float\n    Phi2.\nmax_iter_svd : int\n    Maximum number of iterations for SVD.\ntol : float\n    Tolerance for convergence.\nmax_iter_propagate : int\n    Maximum number of iterations for propagation.\nverbose : bool\n    Verbose mode.\n\nReturns\n-------\nvideo_mueller : numpy.ndarray\n    Video Mueller matrix. (num_frames, height, width, 4, 4)");
 
     m.def("calculate_ndcoffs", [](const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
           { return calculate_ndcoffs(theta, phi1, phi2); }, nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"), "Calculate numenator and denominator cofficients");
