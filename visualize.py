@@ -14,6 +14,14 @@ def save_images(video_mm, dir_dst, filename_dst_stem, subfolder, text_type):
         cv2.imwrite(filename_png, img_mueller_vis)
 
 
+def crop_roi(video_mm):
+    img_is_nan = np.isnan(video_mm).all(axis=(0, 3, 4))
+    y0, y1 = np.where(~img_is_nan)[0][[0, -1]]
+    x0, x1 = np.where(~img_is_nan)[1][[0, -1]]
+    video_mm = video_mm[:, y0:y1, x0:x1]
+    return video_mm
+
+
 def visualize_mueller_video(filename_npy):
     filename_npy = Path(filename_npy)
     dir_dst = filename_npy.parent
@@ -26,10 +34,7 @@ def visualize_mueller_video(filename_npy):
     save_images(video_mm, dir_dst, filename_dst_stem, "images_wo_ROI", "none")
 
     # Crop ROI
-    img_is_nan = np.isnan(video_mm).all(axis=(0, 3, 4))
-    y0, y1 = np.where(~img_is_nan)[0][[0, -1]]
-    x0, x1 = np.where(~img_is_nan)[1][[0, -1]]
-    video_mm = video_mm[:, y0:y1, x0:x1]
+    video_mm = crop_roi(video_mm)
 
     save_images(video_mm, dir_dst, filename_dst_stem, "images_median", "median")
     save_images(video_mm, dir_dst, filename_dst_stem, "images", "none")
