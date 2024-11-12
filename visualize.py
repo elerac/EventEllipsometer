@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 import numpy as np
 import cv2
@@ -32,3 +33,21 @@ def visualize_mueller_video(filename_npy):
 
     save_images(video_mm, dir_dst, filename_dst_stem, "images_median", "median")
     save_images(video_mm, dir_dst, filename_dst_stem, "images", "none")
+    video_mm_05 = video_mm.copy()
+    video_mm_05[..., 0, 0] *= 0.5
+    save_images(video_mm_05, dir_dst, filename_dst_stem, "images_05", "none")
+
+    video_mm_025 = video_mm.copy()
+    video_mm_025[..., 0, 0] *= 0.25
+    save_images(video_mm_025, dir_dst, filename_dst_stem, "images_025", "none")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename_npy", type=str)
+    args = parser.parse_args()
+    visualize_mueller_video(args.filename_npy)
+
+
+if __name__ == "__main__":
+    main()
