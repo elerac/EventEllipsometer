@@ -123,22 +123,6 @@ std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::Vector
         }
     }
 
-    // // If the first trigger is a 5th, delete it.
-    // if ((trig_t_x5[0] - trig_t_x1[0]) < 0)
-    // {
-    //     trig_t_x5.erase(trig_t_x5.begin());
-    // }
-
-    // // If the length of the triggers is not the same, delete the last one from the longer one.
-    // if (trig_t_x5.size() > trig_t_x1.size())
-    // {
-    //     trig_t_x5.pop_back();
-    // }
-    // if (trig_t_x5.size() < trig_t_x1.size())
-    // {
-    //     trig_t_x1.pop_back();
-    // }
-
     // Check img_C_on are positive values
     if (img_C_on.minCoeff() <= 0.0f)
     {
@@ -225,7 +209,11 @@ std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::Vector
                 Eigen::VectorXf theta = Eigen::Map<Eigen::VectorXf>(vec_theta.data(), vec_theta.size());
                 Eigen::VectorXf dlogI = Eigen::Map<Eigen::VectorXf>(vec_dlogI.data(), vec_dlogI.size());
                 Eigen::VectorXf weights = Eigen::Map<Eigen::VectorXf>(vec_weights.data(), vec_weights.size());
-                weights /= weights.mean(); // normalize weights
+                if (weights.size() != 0)
+                {
+                    weights /= weights.mean(); // normalize weights
+                }
+
                 ellipsometry_eventmap.set(ix, iy, theta, dlogI, weights, phi_offsets[it]);
             }
         }
