@@ -1,6 +1,6 @@
 #include <PID_v1.h>
 #define DEBUG 0
-#define DEBUG_LITE 1
+#define DEBUG_LITE 0
 #define PARAM_TUNE 0
 
 // Baud rate
@@ -18,8 +18,10 @@ double setpoint_x1 = 15.0;
 double setpoint_x5 = setpoint_x1 * 5.0;
 double input_x1, output_x1;
 double input_x5, output_x5;
-PID myPID_x1(&input_x1, &output_x1, &setpoint_x1, 100, 170, 0.2, DIRECT);
-PID myPID_x5(&input_x5, &output_x5, &setpoint_x5, 100, 170, 0.2, DIRECT);
+// PID myPID_x1(&input_x1, &output_x1, &setpoint_x1, 110, 970, 0.1, DIRECT);
+// PID myPID_x5(&input_x5, &output_x5, &setpoint_x5, 120, 970, 0.1, DIRECT);
+PID myPID_x1(&input_x1, &output_x1, &setpoint_x1, 160, 900, 0.1, DIRECT);
+PID myPID_x5(&input_x5, &output_x5, &setpoint_x5, 160, 900, 0.1, DIRECT);
 
 // Initialize
 unsigned long period_x1 = 1000000000; // [us/rot]
@@ -30,6 +32,10 @@ unsigned long t_prev_x1 = micros();
 unsigned long t_prev_x5 = micros();
 int trigState = LOW;
 
+unsigned long t_trig_x1 = 0;
+unsigned long t_trig_x5 = 0;
+bool is_updated = false;
+
 void updatePeriod_x1()
 {
     static bool flag = true;
@@ -39,6 +45,7 @@ void updatePeriod_x1()
     {
         trigState = HIGH;
         digitalWrite(pinOut_trig, trigState);
+        t_trig_x1 = micros();
     }
  
     if (flag)
@@ -60,6 +67,8 @@ void updatePeriod_x5()
     {
         trigState = LOW;
         digitalWrite(pinOut_trig, trigState);
+        t_trig_x5 = micros();
+        is_updated = true;
     }
 
     if (flag)
@@ -101,6 +110,8 @@ void setup()
     setpoint_x1 = setpoint_x1 * coff;
     setpoint_x5 = setpoint_x5 * coff;
 
+    Serial.begin(baudRate);
+
 #if DEBUG || DEBUG_LITE || PARAM_TUNE
     Serial.begin(baudRate);
 #endif
@@ -124,6 +135,19 @@ void loop()
     analogWrite(pinOut_x5, (int)output_x5);
 
     unsigned long t_end_pid = micros();
+
+    if (is_updated)
+    {
+      is_updated = false;
+      Serial.print(0);
+    Serial.print(", ");
+      Serial.print(7000);
+    Serial.print(", ");
+
+    Serial.println(t_trig_x5 - t_trig_x1);
+    }
+
+
 
 #if PARAM_TUNE
     // Get PID parameters from serial and update
