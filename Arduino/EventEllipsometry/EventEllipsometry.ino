@@ -1,7 +1,6 @@
 #include <PID_v1.h>
 #define DEBUG 0
-#define DEBUG_LITE 0
-#define PARAM_TUNE 0
+#define DEBUG_LITE 1
 
 // Baud rate
 unsigned long baudRate = 115200;
@@ -18,8 +17,6 @@ double setpoint_x1 = 15.0;
 double setpoint_x5 = setpoint_x1 * 5.0;
 double input_x1, output_x1;
 double input_x5, output_x5;
-// PID myPID_x1(&input_x1, &output_x1, &setpoint_x1, 110, 970, 0.1, DIRECT);
-// PID myPID_x5(&input_x5, &output_x5, &setpoint_x5, 120, 970, 0.1, DIRECT);
 PID myPID_x1(&input_x1, &output_x1, &setpoint_x1, 160, 900, 0.1, DIRECT);
 PID myPID_x5(&input_x5, &output_x5, &setpoint_x5, 160, 900, 0.1, DIRECT);
 
@@ -34,7 +31,6 @@ int trigState = LOW;
 
 unsigned long t_trig_x1 = 0;
 unsigned long t_trig_x5 = 0;
-bool is_updated = false;
 
 void updatePeriod_x1()
 {
@@ -47,7 +43,7 @@ void updatePeriod_x1()
         digitalWrite(pinOut_trig, trigState);
         t_trig_x1 = micros();
     }
- 
+
     if (flag)
     {
         unsigned long t_now = micros();
@@ -68,7 +64,6 @@ void updatePeriod_x5()
         trigState = LOW;
         digitalWrite(pinOut_trig, trigState);
         t_trig_x5 = micros();
-        is_updated = true;
     }
 
     if (flag)
@@ -104,17 +99,9 @@ void setup()
     myPID_x1.SetOutputLimits(0, 4095);
     myPID_x5.SetOutputLimits(0, 4095);
 
-    // Calibration
-    double coff = 1.002154632459789;
-    coff = 1.0;
-    setpoint_x1 = setpoint_x1 * coff;
-    setpoint_x5 = setpoint_x5 * coff;
-
     Serial.begin(baudRate);
 
-#if DEBUG || DEBUG_LITE || PARAM_TUNE
-    Serial.begin(baudRate);
-#endif
+    delay(1000);
 }
 
 void loop()
@@ -136,49 +123,9 @@ void loop()
 
     unsigned long t_end_pid = micros();
 
-    if (is_updated)
-    {
-      is_updated = false;
-      Serial.print(0);
+#if DEBUG_LITE
+    Serial.print(t_now);
     Serial.print(", ");
-      Serial.print(7000);
-    Serial.print(", ");
-
-    Serial.println(t_trig_x5 - t_trig_x1);
-    }
-
-
-
-#if PARAM_TUNE
-    // Get PID parameters from serial and update
-    // params are separated by comma "Kp, Ki, Kd"
-    if (Serial.available() > 0)
-    {
-        String str = Serial.readString();
-        int idx = str.indexOf(",");
-        if (idx > 0)
-        {
-            double Kp = str.substring(0, idx).toDouble();
-            str.remove(0, idx + 1);
-            idx = str.indexOf(",");
-            if (idx > 0)
-            {
-                double Ki = str.substring(0, idx).toDouble();
-                double Kd = str.substring(idx + 1).toDouble();
-                myPID_x1.SetTunings(Kp, Ki, Kd);
-                myPID_x5.SetTunings(Kp, Ki, Kd);
-            }
-        }
-        // Serial.println("PID parameters updated");
-        // Serial.println(myPID_x1.GetKp());
-        // Serial.println(myPID_x1.GetKi());
-        // Serial.println(myPID_x1.GetKd());
-        // delay(1000);
-    }
-#endif
-
-#if DEBUG || DEBUG_LITE
-#if DEBUG_LITE && !DEBUG
     Serial.print(freq_x1, 2);
     Serial.print(", ");
     Serial.print(freq_x5, 2);
@@ -192,9 +139,9 @@ void loop()
 #if DEBUG
     Serial.print(t_now);
     Serial.print(", ");
-    Serial.print(freq_x1, 1);
+    Serial.print(freq_x1, 2);
     Serial.print(", ");
-    Serial.print(freq_x5, 1);
+    Serial.print(freq_x5, 2);
     Serial.print(", ");
     Serial.print(output_x1, 0);
     Serial.print(", ");
@@ -208,6 +155,5 @@ void loop()
     Serial.print(", ");
     unsigned long t_end_serial = micros();
     Serial.println(t_end_serial - t_end_pid);
-#endif
 #endif
 }
