@@ -1,5 +1,4 @@
 import numpy as np
-import numpy.typing as npt
 import polanalyser as pa
 import time
 
@@ -82,10 +81,8 @@ def main():
     np.set_printoptions(precision=3, suppress=True)
     np.random.seed(0)
 
-    M = np.random.rand(100, 100, 4, 4) * 2 - 1
+    M = np.random.rand(1000, 100, 4, 4) * 2 - 1
     M[..., 0, 0] = 1.0
-
-    M = np.eye(4) + 0.1 * M
 
     time_start = time.time()
     ismueller_bf = ismueller(M, method=ISMUELLER_STOKES)
