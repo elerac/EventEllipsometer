@@ -112,7 +112,7 @@ def run_worker():
                     # "to_world": mi.ScalarTransform4f.look_at(origin=[200, 100, 600], target=[100, 0, 500], up=[0, 1, 0]),
                     "fov": 4,
                     # "fov": 100,
-                    "film": {"type": "hdrfilm", "width": 346 // 8, "height": 260 // 8},
+                    "film": {"type": "hdrfilm", "width": 346, "height": 260},
                 },
                 "plane1": {
                     "type": "rectangle",
