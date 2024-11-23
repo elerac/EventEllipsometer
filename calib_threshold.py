@@ -1,9 +1,8 @@
 import numpy as np
 from pathlib import Path
 import eventellipsometry as ee
-import matplotlib.pyplot as plt
 from pathlib import Path
-from tqdm import trange, tqdm
+from tqdm import tqdm
 import cv2
 import polanalyser as pa
 
@@ -80,11 +79,11 @@ def calib_threshold(events, fast_events, ix, iy):
 def main():
     # Parameters
     bias_diff = 20
-    bias_diff_on = -10
-    bias_diff_off = -10
+    bias_diff_on = bias_diff_off = -35
     on_off = "off"
     height = 720
     width = 1280
+
     if on_off == "on":
         calib_rampdown_dir = "recordings/calib_thresh_rampup"
         filename_npy = f"calib/thresh/on/diff{bias_diff}_diff_on{bias_diff_on}_diff_off{bias_diff_off}.npy"
@@ -117,13 +116,19 @@ def main():
         roi_x, roi_y, roi_w, roi_h = ee.utils.get_num_after_keyword(filename_raw, ["x", "y", "w", "h"])
 
         events = ee.read_event(filename_raw)
+        t = events["t"]
+        index = np.argsort(t)
+        events["x"] = events["x"][index]
+        events["y"] = events["y"][index]
+        events["t"] = events["t"][index]
+        events["p"] = events["p"][index]
+
         event_map = ee.EventMap(events["x"], events["y"], events["t"], events["p"], events["width"], events["height"])
 
         for ix in range(roi_x, roi_x + roi_w):
             for iy in range(roi_y, roi_y + roi_h):
                 a, b, t, t_diff, p, valid = calib_threshold(events, event_map, ix, iy)
                 img_C[iy, ix] = a
-                # img_C[iy, ix] = np.random.normal(0, 0.1)
 
         # Visualize the contrast map
         vmin = np.percentile(img_C[~np.isnan(img_C)], 1).item()
