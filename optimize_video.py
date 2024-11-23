@@ -2,8 +2,6 @@ import argparse
 import time
 from pathlib import Path
 import numpy as np
-import cv2
-import polanalyser as pa
 import eventellipsometry as ee
 from recordings.filenames import filename_raw
 import calib
@@ -17,7 +15,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--filename_raw", type=Path, default=filename_raw)
     parser.add_argument("--max_frames", type=int, default=None)
-    parser.add_argument("--max_iter_svd", "--iter_svd", type=int, default=10)
+    parser.add_argument("--max_iter_svd", "--iter_svd", type=int, default=5)
     parser.add_argument("--tol", type=float, default=0.01)
     parser.add_argument("--max_iter_propagate", "--iter_propagate", type=int, default=10)
     args = parser.parse_args()
@@ -73,18 +71,8 @@ def main():
         # Calib
         print("Calibration parameters")
         print(f"  QWP offset")
-        # phi1 = np.deg2rad(56)
-        # phi2 = np.deg2rad(146)
-
-        # phi1 = np.deg2rad(6.5)
-        # phi2 = np.deg2rad(64)
-
-        # phi1 = np.deg2rad(6.5)
-        # phi2 = np.deg2rad(62.5)
-
         phi1 = calib.phi1
         phi2 = calib.phi2
-
         print(f"    phi1: {np.rad2deg(phi1):.2f} ({phi1:.2f})")
         print(f"    phi2: {np.rad2deg(phi2):.2f} ({phi2:.2f})")
         print(f"  Thresholds")
@@ -94,9 +82,6 @@ def main():
         img_C_off = calib.thresh_off(bias_diff, bias_diff_off)
         img_C_on = np.clip(img_C_on, 1e-9, None)
         img_C_off = np.clip(img_C_off, None, -1e-9)
-        # img_C_on = np.median(img_C_on)
-        # img_C_off = np.median(img_C_off)
-
         t_refr = calib.refractory_period(bias_diff, bias_diff_on, bias_diff_off, bias_fo, bias_hpf, bias_refr)
         print(f"  Refractory period: {t_refr} us")
 
@@ -112,43 +97,6 @@ def main():
     video_mm = np.array(video_mm)
     print(f"Total reconstruction time: {time.time() - time_start:.2f} s")
     num_frames, height, width, _, _ = video_mm.shape
-
-    # Visualize
-    # video_mae = np.full((num_frames, height, width), np.nan)  # Video of mean absolute error
-    # video_color = np.zeros((num_frames, height, width, 3))  # Video of color
-    # for f in range(num_frames):
-    #     for y in range(height):
-    #         for x in range(width):
-    #             theta, dlogI, weights, phi_offset = ellipsometry_eventmaps[f].get(x, y)
-    #             if len(theta) == 0:
-    #                 continue
-
-    #             n_coffs, d_coffs = ee.calculate_ndcoffs(theta, phi1, phi2 - 5 * phi_offset)
-    #             M = video_mm[f, y, x]
-    #             dlogI_pred = (n_coffs @ M.flatten()) / (d_coffs @ M.flatten())
-    #             r = np.abs(dlogI - dlogI_pred)
-    #             mae = np.mean(r * weights)
-    #             video_mae[f, y, x] = mae
-
-    #             p = np.sign(dlogI)
-    #             color_pos = np.array([0.0, 0.0, 1.0])
-    #             color_neg = np.array([1.0, 0.0, 0.0])
-    #             # inv_r = 1 / r
-    #             # inv_r_normalized = inv_r
-    #             # r_pecentile = np.percentile(r, 99)
-    #             # invalid = r > r_pecentile
-    #             w_pos = (p == 1) / p.size * r**2 / 100
-    #             w_neg = (p == -1) / p.size * r**2 / 100
-    #             color = color_pos * w_pos[:, None] + color_neg * w_neg[:, None]
-    #             video_color[f, y, x] = np.sum(color, axis=0)
-
-    # print(f"Mean absolute error: {np.nanmean(video_mae):.3f}")
-    # vmin = np.percentile(video_mae[~np.isnan(video_mae)], 1)
-    # vmax = np.percentile(video_mae[~np.isnan(video_mae)], 99)
-    # video_mae_vis = pa.applyColorMap(video_mae, "inferno", vmin=vmin, vmax=vmax)
-    # cv2.imwrite("mae.png", video_mae_vis[0])
-
-    # exit()
 
     print("Save Mueller matrix video")
     dir_dst = Path(f"results/{args.filename_raw.stem}")
