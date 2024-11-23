@@ -5,7 +5,6 @@ import numpy as np
 import eventellipsometry as ee
 from recordings.filenames import filename_raw
 import calib
-import visualize
 
 
 def main():
@@ -109,7 +108,7 @@ def main():
     np.save(filename_npy, video_mm)
     print(f"  npy: {filename_npy}")
 
-    visualize.visualize_mueller_video(filename_npy)
+    ee.visualize_mueller_video(filename_npy)
 
 
 if __name__ == "__main__":

@@ -3,11 +3,11 @@ from pathlib import Path
 import numpy as np
 import cv2
 import polanalyser as pa
-import eventellipsometry as ee
+from .utils_mueller import mueller_image
 
 
 def save_images(video_mm, dir_dst, filename_dst_stem, subfolder, text_type):
-    img_mueller_vis_list = [ee.mueller_image(pa.gammaCorrection(frame, 1 / 1), text_type=text_type, border=0, color_nan=(255, 255, 255)) for frame in video_mm]
+    img_mueller_vis_list = [mueller_image(pa.gammaCorrection(frame, 1 / 1), text_type=text_type, border=0, color_nan=(255, 255, 255)) for frame in video_mm]
     for i, img_mueller_vis in enumerate(img_mueller_vis_list):
         filename_png = f"{dir_dst}/{subfolder}/{filename_dst_stem}_{i:03d}.png"
         Path(filename_png).parent.mkdir(exist_ok=True, parents=True)
