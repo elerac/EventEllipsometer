@@ -91,6 +91,8 @@ def main():
         ellipsometry_eventmaps = ellipsometry_eventmaps[: args.max_frames]
     print(f"  Number of frames: {len(ellipsometry_eventmaps)}")
 
+    # ellipsometry_eventmaps = ee.add_noise(ellipsometry_eventmaps)
+
     print("Start reconstruction")
     time_start = time.time()
     video_mm = ee.fit_mueller(ellipsometry_eventmaps, phi1, phi2, max_iter_svd=args.max_iter_svd, tol=args.tol, max_iter_propagate=args.max_iter_propagate, verbose=True)
