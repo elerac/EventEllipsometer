@@ -10,9 +10,8 @@ import datetime
 def main():
     np.random.seed(0)
     np.set_printoptions(precision=3, suppress=True)
-    filename_raw = "./recordings/calib_qwp_offset/recording_2024-10-19_17-17-53.raw"  # QWP(pi/4)
+    # filename_raw = "./recordings/calib_qwp_offset/recording_2024-10-19_17-17-53.raw"  # QWP(pi/4)
     filename_raw = "./recordings/calib_qwp_offset/recording_2024-10-20_17-41-08.raw"  # QWP, 200x200
-    # filename_raw = "./recordings/recording_2024-11-05_17-17-28.raw" # air
 
     print(f"Reading {filename_raw}")
 
@@ -82,13 +81,7 @@ def main():
         f.write(f"% {filename_raw}\n")
         f.write(f"{phi2:.6f}")
 
-    # Read exported phi1 and phi2 again
-    # phi1 = np.loadtxt(filename_phi1, comments="%")
-    # phi2 = np.loadtxt(filename_phi2, comments="%")
-
     # Visualize the error map
-    # vmin = np.percentile(img_error, 1)
-    # vmax = np.percentile(img_error, 99)
     vmin = np.min(img_error)
     vmax = np.max(img_error)
     print(f"vmin: {vmin}, vmax: {vmax}")
