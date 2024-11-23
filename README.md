@@ -6,9 +6,9 @@
 
 ## Software Environment Setup
 
-### Python Environment (Not Necessary)
+### Python Environment
 
-This project was developed with [Rye](https://rye.astral.sh/) to manage the Python environment. To set up the Python environment, run the `rye sync` command.
+To set up Python environment, install the libraries specified in pyproject.toml. If you are [Rye](https://rye.astral.sh/) user, you can run `rye sync` to set up the environment.
 
 ### C++ Extension
 
