@@ -21,3 +21,9 @@ We developed a C++ extension for the event data processing to accelerate the com
 ### Hardware Development
 
 We developed a hardware prototype using [Arduino IDE](https://www.arduino.cc/en/software). To calibrate the contrast threshold, we utilized [WaveForms](https://reference.digilentinc.com/reference/software/waveforms/waveforms-3/start) to operate the Analog Discovery.
+
+## Running the Code
+
+```bash
+python scripts/reconstruct_mm.py --filename_raw reconrdings/filaename.raw
+```
