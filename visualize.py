@@ -14,8 +14,8 @@ def save_images(video_mm, dir_dst, filename_dst_stem, subfolder, text_type):
         cv2.imwrite(filename_png, img_mueller_vis)
 
 
-def crop_roi(video_mm):
-    img_is_nan = np.isnan(video_mm).all(axis=(0, 3, 4))
+def crop_roi(video_mm, axis=(0, 3, 4)):
+    img_is_nan = np.isnan(video_mm).all(axis=axis)
     y0, y1 = np.where(~img_is_nan)[0][[0, -1]]
     x0, x1 = np.where(~img_is_nan)[1][[0, -1]]
     video_mm = video_mm[:, y0:y1, x0:x1]
