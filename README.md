@@ -28,4 +28,4 @@ We developed a hardware prototype using [Arduino IDE](https://www.arduino.cc/en/
 python scripts/reconstruct_mm.py --filename_raw recordings\recording_2024-11-07_15-55-17_small.npz
 ```
 
-The file `recording_2024-11-07_15-55-17_small.npz` contains sample event data converted from a raw data file. The original data file can be downloaded from [here]().
+The file `recording_2024-11-07_15-55-17_small.npz` is a sample event data converted from a raw data file. The original data file can be downloaded from [here]().
