@@ -25,31 +25,31 @@ def main():
         raise Exception("Failed to build nanobind module")
     green_print("Finished building nanobind module")
 
-    # In windows, copy build/Debug to src/eventellipsometry
-    # and rename Debug to _eventellipsometry_impl
+    # In windows, copy build/Debug to src/eventellipsometer
+    # and rename Debug to _eventellipsometer_impl
     if os.name == "nt":
         src = f"build/{args.config}"
-        dst = "src/eventellipsometry/_eventellipsometry_impl"
+        dst = "src/eventellipsometer/_eventellipsometer_impl"
         if os.path.exists(dst):
             shutil.rmtree(dst)
         shutil.copytree(src, dst)
     else:
-        raise
+        raise Exception("Unsupported OS")
 
     # Generate __init__.py
-    with open("src/eventellipsometry/_eventellipsometry_impl/__init__.py", "w") as f:
-        f.write("from ._eventellipsometry_impl import *")
+    with open("src/eventellipsometer/_eventellipsometer_impl/__init__.py", "w") as f:
+        f.write("from ._eventellipsometer_impl import *")
 
     green_print(f"Moved {src} to {dst}, and generated __init__.py")
 
     # Generate pyi file
-    import eventellipsometry as ee
+    import eventellipsometer as ee
 
-    module = ee._eventellipsometry_impl._eventellipsometry_impl
+    module = ee._eventellipsometer_impl._eventellipsometer_impl
     sg = StubGen(module)
     sg.put(module)
     pyi = sg.get()
-    with open("src/eventellipsometry/_eventellipsometry_impl/__init__.pyi", "w") as f:
+    with open("src/eventellipsometer/_eventellipsometer_impl/__init__.pyi", "w") as f:
         f.write(pyi)
 
     green_print("Generated pyi file")

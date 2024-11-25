@@ -1,7 +1,7 @@
 import itertools
 import datetime
 from tqdm import trange, tqdm
-import eventellipsometry as ee
+import eventellipsometer as ee
 
 
 def main():

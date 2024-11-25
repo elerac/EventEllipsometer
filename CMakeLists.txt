@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15...3.27)
-project(_eventellipsometry_impl)
+project(_eventellipsometer_impl)
 
 if(CMAKE_VERSION VERSION_LESS 3.18)
   set(DEV_MODULE Development)
@@ -51,15 +51,15 @@ if(MSVC)
 endif()
 
 # Compile extension module with size optimization and add the library
-nanobind_add_module(_eventellipsometry_impl NOMINSIZE src/cpp/eventellipsometry.cpp)
-# nanobind_add_module(_eventellipsometry_impl NOMINSIZE src/eventellipsometry.cpp src/equations.cpp src/optim.cpp)
-# target_link_libraries(_eventellipsometry_impl PRIVATE lib)
+nanobind_add_module(_eventellipsometer_impl NOMINSIZE src/cpp/eventellipsometer.cpp)
+# nanobind_add_module(_eventellipsometer_impl NOMINSIZE src/eventellipsometer.cpp src/equations.cpp src/optim.cpp)
+# target_link_libraries(_eventellipsometer_impl PRIVATE lib)
 
 # Eigen3
 find_package(Eigen3 REQUIRED)
-target_include_directories(_eventellipsometry_impl PRIVATE ${EIGEN3_INCLUDE_DIR})
+target_include_directories(_eventellipsometer_impl PRIVATE ${EIGEN3_INCLUDE_DIR})
 # target_include_directories(lib PRIVATE ${EIGEN3_INCLUDE_DIR})
 
 # OpenMP
 find_package(OpenMP REQUIRED)
-target_link_libraries(_eventellipsometry_impl PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries(_eventellipsometer_impl PRIVATE OpenMP::OpenMP_CXX)

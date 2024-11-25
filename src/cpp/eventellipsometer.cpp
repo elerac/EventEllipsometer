@@ -128,7 +128,7 @@ Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
             plt.attr("plot")(theta_np, dlogI_pred_gt_np, "label"_a = "gt", "linestyle"_a = "--", "color"_a = "tab:green");
 
             auto cv2 = nb::module_::import_("cv2");
-            auto ee = nb::module_::import_("eventellipsometry");
+            auto ee = nb::module_::import_("eventellipsometer");
 
             // Show Mueller image
             Eigen::Matrix<float, 4, 4> M;
@@ -150,7 +150,7 @@ Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
     return x;
 }
 
-auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes,
+auto fit_mueller(const std::vector<EventEllipsometerDataFrame> &dataframes,
                  float phi1,
                  float phi2,
                  int max_iter_svd = 5,
@@ -347,7 +347,7 @@ auto fit_mueller(const std::vector<EventEllipsometryDataFrame> &dataframes,
     return nb::ndarray<nb::numpy, float, nb::shape<-1, -1, -1, 4, 4>, nb::device::cpu, nb::c_contig>(data, {num_frames, height, width, 4, 4}, owner);
 }
 
-NB_MODULE(_eventellipsometry_impl, m)
+NB_MODULE(_eventellipsometer_impl, m)
 {
     m.def("searchsorted", [](const nb::DRef<Eigen::VectorX<float>> &a, float v_min, float v_max)
           { return searchsorted<float>(a, v_min, v_max); }, nb::arg("a").noconvert(), nb::arg("v_min"), nb::arg("v_max"));
@@ -357,7 +357,7 @@ NB_MODULE(_eventellipsometry_impl, m)
 
     m.def("fit_mueller_svd", &fit_mueller_svd<true>, nb::arg("theta").noconvert(), nb::arg("dlogI").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("max_iter") = 5, nb::arg("tol") = 1e-2, nb::arg("weights").none());
 
-    m.def("fit_mueller", &fit_mueller, nb::arg("dataframes").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("max_iter_svd") = 5, nb::arg("tol") = 1e-2, nb::arg("max_iter_propagate") = 10, nb::arg("verbose") = false, "Fit Mueller matrix video.\n\nParameters\n----------\ndataframes : list of EventEllipsometryDataFrame\n    List of EventEllipsometryDataFrame.\nphi1 : float\n    Phi1.\nphi2 : float\n    Phi2.\nmax_iter_svd : int\n    Maximum number of iterations for SVD.\ntol : float\n    Tolerance for convergence.\nmax_iter_propagate : int\n    Maximum number of iterations for propagation.\nverbose : bool\n    Verbose mode.\n\nReturns\n-------\nvideo_mueller : numpy.ndarray\n    Video Mueller matrix. (num_frames, height, width, 4, 4)");
+    m.def("fit_mueller", &fit_mueller, nb::arg("dataframes").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("max_iter_svd") = 5, nb::arg("tol") = 1e-2, nb::arg("max_iter_propagate") = 10, nb::arg("verbose") = false, "Fit Mueller matrix video.\n\nParameters\n----------\ndataframes : list of EventEllipsometerDataFrame\n    List of EventEllipsometerDataFrame.\nphi1 : float\n    Phi1.\nphi2 : float\n    Phi2.\nmax_iter_svd : int\n    Maximum number of iterations for SVD.\ntol : float\n    Tolerance for convergence.\nmax_iter_propagate : int\n    Maximum number of iterations for propagation.\nverbose : bool\n    Verbose mode.\n\nReturns\n-------\nvideo_mueller : numpy.ndarray\n    Video Mueller matrix. (num_frames, height, width, 4, 4)");
 
     m.def("calculate_ndcoffs", [](const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
           { return calculate_ndcoffs(theta, phi1, phi2); }, nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"), "Calculate numenator and denominator cofficients");
@@ -374,11 +374,11 @@ NB_MODULE(_eventellipsometry_impl, m)
         .def("get", nb::overload_cast<size_t, size_t>(&EventMap::get, nb::const_), nb::arg("x"), nb::arg("y"))
         .def("get", nb::overload_cast<size_t, size_t, int64_t, int64_t>(&EventMap::get, nb::const_), nb::arg("x"), nb::arg("y"), nb::arg("t_min"), nb::arg("t_max"));
 
-    nb::class_<EventEllipsometryDataFrame>(m, "EventEllipsometryDataFrame")
+    nb::class_<EventEllipsometerDataFrame>(m, "EventEllipsometerDataFrame")
         .def(nb::init<int, int>(), nb::arg("width"), nb::arg("height"))
-        .def("set", &EventEllipsometryDataFrame::set, nb::arg("x"), nb::arg("y"), nb::arg("theta"), nb::arg("dlogI"), nb::arg("weight"), nb::arg("phi_offset"))
-        .def("get", &EventEllipsometryDataFrame::get, nb::arg("x"), nb::arg("y"))
-        .def("shape", &EventEllipsometryDataFrame::shape, nb::arg("i"));
+        .def("set", &EventEllipsometerDataFrame::set, nb::arg("x"), nb::arg("y"), nb::arg("theta"), nb::arg("dlogI"), nb::arg("weight"), nb::arg("phi_offset"))
+        .def("get", &EventEllipsometerDataFrame::get, nb::arg("x"), nb::arg("y"))
+        .def("shape", &EventEllipsometerDataFrame::shape, nb::arg("i"));
 
     m.def("construct_dataframes", [](const nb::DRef<Eigen::VectorX<uint16_t>> &x, const nb::DRef<Eigen::VectorX<uint16_t>> &y, const nb::DRef<Eigen::VectorX<int64_t>> &t, const nb::DRef<Eigen::VectorX<int16_t>> &p, int width, int height, const nb::DRef<Eigen::VectorX<int64_t>> &trig_t, const nb::DRef<Eigen::VectorX<int16_t>> &trig_p, const nb::DRef<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> &img_C_on, const nb::DRef<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>> &img_C_off, int64_t t_refr = 0)
           { return construct_dataframes(x, y, t, p, width, height, trig_t, trig_p, img_C_on, img_C_off, t_refr); }, nb::arg("x").noconvert(), nb::arg("y").noconvert(), nb::arg("t").noconvert(), nb::arg("p").noconvert(), nb::arg("width"), nb::arg("height"), nb::arg("trig_t").noconvert(), nb::arg("trig_p").noconvert(), nb::arg("img_C_on").noconvert(), nb::arg("img_C_off").noconvert(), nb::arg("t_refr") = 0);

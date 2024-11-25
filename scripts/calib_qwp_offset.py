@@ -1,5 +1,5 @@
 import numpy as np
-import eventellipsometry as ee
+import eventellipsometer as ee
 import cv2
 import matplotlib.pyplot as plt
 import polanalyser as pa

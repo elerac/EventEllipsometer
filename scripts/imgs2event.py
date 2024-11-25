@@ -8,7 +8,7 @@ import polanalyser as pa
 from DVS_Voltmeter import EventSim
 from DVS_Voltmeter import camera_para
 
-import eventellipsometry as ee
+import eventellipsometer as ee
 
 
 def main():

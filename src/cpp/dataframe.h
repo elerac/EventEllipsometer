@@ -8,9 +8,9 @@
 #include "array.h"
 #include "eventmap.h"
 
-class EventEllipsometryDataFrame
+class EventEllipsometerDataFrame
 {
-    // Event data format for EventEllipsometry setup
+    // Event data format for EventEllipsometer setup
 public:
     int width;
     int height;
@@ -19,7 +19,7 @@ public:
     Array2d<Eigen::VectorXf> map_weights; // Weight vector
     float phi_offset;                     // Offset
 
-    EventEllipsometryDataFrame(int width, int height) : width(width), height(height), map_theta(height, width), map_dlogI(height, width), map_weights(height, width)
+    EventEllipsometerDataFrame(int width, int height) : width(width), height(height), map_theta(height, width), map_dlogI(height, width), map_weights(height, width)
     {
     }
 
@@ -94,7 +94,7 @@ auto clean_triggers(const std::vector<int64_t> &trig_t_x1, const std::vector<int
     return std::make_pair(trig_t_x1_clean, trig_t_x5_clean);
 }
 
-std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::VectorX<uint16_t> &x,
+std::vector<EventEllipsometerDataFrame> construct_dataframes(const Eigen::VectorX<uint16_t> &x,
                                                              const Eigen::VectorX<uint16_t> &y,
                                                              const Eigen::VectorX<int64_t> &t,
                                                              const Eigen::VectorX<int16_t> &p,
@@ -147,7 +147,7 @@ std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::Vector
     }
 
     size_t num = trig_t_x1.size() - 1;
-    std::vector<EventEllipsometryDataFrame> ellipsometry_eventmaps;
+    std::vector<EventEllipsometerDataFrame> ellipsometry_eventmaps;
     ellipsometry_eventmaps.reserve(num);
 
     for (size_t it = 0; it < num; ++it)
@@ -163,7 +163,7 @@ std::vector<EventEllipsometryDataFrame> construct_dataframes(const Eigen::Vector
         EventMap eventmap(x_sub, y_sub, t_sub, p_sub, width, height);
 
         // Convert (t, p) to (theta, dlogI)
-        EventEllipsometryDataFrame ellipsometry_eventmap(width, height);
+        EventEllipsometerDataFrame ellipsometry_eventmap(width, height);
         for (size_t iy = 0; iy < height; ++iy)
         {
             for (size_t ix = 0; ix < width; ++ix)

@@ -2,7 +2,7 @@ import argparse
 import time
 from pathlib import Path
 import numpy as np
-import eventellipsometry as ee
+import eventellipsometer as ee
 from recordings.filenames import filename_raw
 import calib
 

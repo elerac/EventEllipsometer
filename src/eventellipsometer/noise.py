@@ -1,5 +1,5 @@
 import numpy as np
-import eventellipsometry as ee
+import eventellipsometer as ee
 
 
 def add_noise(ellipsometry_eventmaps: list[ee.EventEllipsometryDataFrame]) -> list[ee.EventEllipsometryDataFrame]:

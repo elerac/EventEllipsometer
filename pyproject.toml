@@ -1,7 +1,7 @@
 [project]
-name = "eventellipsometry"
+name = "EventEllipsometer"
 version = "0.1.0"
-description = "Add your description here"
+description = "Event Ellipsometer: Event-based Mueller-Matrix Video Imaging"
 authors = [
     { name = "Ryota Maeda", email = "42407614+elerac@users.noreply.github.com" }
 ]
@@ -34,7 +34,7 @@ dev-dependencies = []
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/eventellipsometry"]
+packages = ["src/eventellipsometer"]
 
 [project.scripts]
 build_cpp = "build_cpp:main"
