@@ -1,6 +1,7 @@
 from .eventmap import EventMapPy
 from .utils_mueller import *
 from . import utils
+from .visualize import *
 
 import importlib.util
 import warnings
