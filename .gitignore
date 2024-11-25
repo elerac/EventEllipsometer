@@ -27,7 +27,9 @@ src/eventellipsometry/_eventellipsometry_impl/
 *.pyi
 
 # event data
-recordings/*
+*.raw
+*.raw.tmp_index
+*.bias
 !recordings/filenames.py
 
 # results
