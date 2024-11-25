@@ -21,7 +21,7 @@ requirements-dev.lock
 *.exp
 *.lib
 *.pdb
-src/eventellipsometry/_eventellipsometry_impl/
+src/eventellipsometer/_eventellipsometer_impl/
 
 # stubgen generated files
 *.pyi
@@ -36,3 +36,14 @@ src/eventellipsometry/_eventellipsometry_impl/
 results/*
 
 docs/figs/*
+
+# calibration data 
+calib/thresh/on_f64/*
+calib/thresh/off_f64/*
+
+test*
+
+mitsuba3/*
+scenes/pbsdf/*
+
+rendered/*

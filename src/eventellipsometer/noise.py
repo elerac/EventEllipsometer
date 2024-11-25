@@ -2,7 +2,7 @@ import numpy as np
 import eventellipsometer as ee
 
 
-def add_noise(ellipsometry_eventmaps: list[ee.EventEllipsometryDataFrame]) -> list[ee.EventEllipsometryDataFrame]:
+def add_noise(ellipsometry_eventmaps: list[ee.EventEllipsometerDataFrame]) -> list[ee.EventEllipsometerDataFrame]:
     for ellipsometry_eventmap in ellipsometry_eventmaps:
         height = ellipsometry_eventmap.shape(0)
         width = ellipsometry_eventmap.shape(1)

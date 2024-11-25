@@ -12,7 +12,7 @@ To set up Python environment, install the libraries specified in pyproject.toml.
 
 ### C++ Extension
 
-We developed a C++ extension for the event data processing to accelerate the computation The extension needs to be built manually by running the `build_cpp.py`. When building the extension, Eigen and OpenMP are required.
+We developed a C++ extension for the event data processing to accelerate the computation The extension needs to be built manually by running the `build_cpp.py`. When building the extension, Eigen and OpenMP are required. We tested this extension on Windows.
 
 ### Event Camera and Data
 
