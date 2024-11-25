@@ -8,10 +8,10 @@
 # filename_raw = "recordings/recording_2024-10-20_17-42-43.raw"  # QWP 45, 200x200
 # filename_raw = "recordings/recording_2024-10-20_18-48-22.raw"  # QWP 90, 200x200
 # filename_raw = "recordings/recording_2024-10-20_18-45-32.raw"  # QWP 135, 200x200
-# filename_raw = "recordings/recording_2024-11-04_17-03-33.raw"  # Gelatin (trans), 500x500, 5sec, Pick!
-# filename_raw = "recordings/recording_2024-11-05_19-32-11.raw"  # Face, 600x600, 10sec, Pick!
-# filename_raw = "recordings/recording_2024-11-05_21-02-16.raw"  # Hair, 600x600, 10sec, Pick!
-# filename_raw = "recordings/recording_2024-11-06_21-25-59.raw"  # Blue sphere, 256x256, 1sec, Pick!
-filename_raw = "recordings/recording_2024-11-07_15-55-17.raw"  # Owl, 400x400, 1sec, Pick!
-# filename_raw = "recordings/recording_2024-11-08_14-18-51.raw"  # Metal, 400x400, 0.5sec, Pick!
-# filename_raw = "recordings/recording_2024-11-08_16-27-29.raw"  # Tape, Pick!
+# filename_raw = "recordings/recording_2024-11-04_17-03-33.raw"  # Gelatin, 500x500, 5sec
+# filename_raw = "recordings/recording_2024-11-05_19-32-11.raw"  # Face, 600x600, 10sec
+# filename_raw = "recordings/recording_2024-11-05_21-02-16.raw"  # Hair, 600x600, 10sec
+# filename_raw = "recordings/recording_2024-11-06_21-25-59.raw"  # Blue sphere, 256x256, 1sec
+filename_raw = "recordings/recording_2024-11-07_15-55-17.raw"  # Owl, 400x400, 1sec
+# filename_raw = "recordings/recording_2024-11-08_14-18-51.raw"  # Metal, 400x400, 0.5sec
+# filename_raw = "recordings/recording_2024-11-08_16-27-29.raw"  # Tape, 256x256, 0.5sec
