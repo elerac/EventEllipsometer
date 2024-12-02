@@ -2,6 +2,8 @@
 
 [Ryota Maeda](https://elerac.github.io/), [Yunseong Moon](https://sites.google.com/view/yunseongmoon), [Seung-Hwan Baek](https://sites.google.com/view/shbaek/)
 
+[[Project Page]](https://elerac.github.io/projects/eventellipsometer/) [[Paper]](https://arxiv.org/abs/2411.17313)
+
 ![teaser](docs/teaser_wide.png)
 
 ## Software Environment Setup
@@ -28,4 +30,17 @@ We developed a hardware prototype using [Arduino IDE](https://www.arduino.cc/en/
 python scripts/reconstruct_mm.py --filename_raw recordings\recording_2024-11-07_15-55-17_small.npz
 ```
 
-The file `recording_2024-11-07_15-55-17_small.npz` is a sample event data converted from a raw data file. The original data file can be downloaded from [here]().
+The file `recording_2024-11-07_15-55-17_small.npz` is a sample event data converted from a raw data file. 
+
+The full dataset will be available soon.
+
+## BibTeX
+
+```bibtex
+@article{maeda2024event,
+    title={Event Ellipsometer: Event-based Mueller-Matrix Video Imaging},
+    author={Maeda, Ryota and Moon, Yunseong and Baek, Seung-Hwan},
+    journal={arXiv preprint arXiv:2411.17313},
+    year={2024}
+}
+```
