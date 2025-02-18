@@ -37,7 +37,8 @@ Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
                                          float phi2,
                                          int max_iter = 5,
                                          float tol = 1e-2,
-                                         const std::optional<Eigen::VectorXf> &weights = std::nullopt)
+                                         const std::optional<Eigen::VectorXf> &weights = std::nullopt,
+                                         bool disable_filter = false)
 {
     // Count number of data points
     size_t num = theta.size();
@@ -64,7 +65,10 @@ Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
     // Solve initial guess
     Eigen::Vector<float, 16> x;
     x = svdSolve(A);
-    x = filter_mueller(x); // x should be physically realizable Mueller matrix
+    if (!disable_filter) [[likely]]
+    {
+        x = filter_mueller(x); // x should be physically realizable Mueller matrix
+    }
 
     // Evaluate initial prediction
     Eigen::VectorXf dlogI_pred = (pn * x).array() / (pd * x).array();
@@ -85,7 +89,10 @@ Eigen::Vector<float, 16> fit_mueller_svd(const Eigen::VectorXf &theta,
 
         // Solve
         x = svdSolve(Aw);
-        x = filter_mueller(x);
+        if (!disable_filter) [[likely]]
+        {
+            x = filter_mueller(x);
+        }
 
         // Evaluate prediction
         dlogI_pred = (pn * x).array() / (pd * x).array();
@@ -156,6 +163,9 @@ auto fit_mueller(const std::vector<EventEllipsometerDataFrame> &dataframes,
                  int max_iter_svd = 5,
                  float tol = 1e-2,
                  int max_iter_propagate = 10,
+                 bool disable_filter = false,
+                 bool disable_propagation = false,
+                 bool disable_random_perturbation = false,
                  bool verbose = false)
 {
     std::chrono::system_clock::time_point start, end;
@@ -214,7 +224,7 @@ auto fit_mueller(const std::vector<EventEllipsometerDataFrame> &dataframes,
                 }
                 else // Enough events
                 {
-                    m = fit_mueller_svd(theta, dlogI, phi1, phi2 - 5 * phi_offset, max_iter_svd, tol, weights);
+                    m = fit_mueller_svd(theta, dlogI, phi1, phi2 - 5 * phi_offset, max_iter_svd, tol, weights, disable_filter);
                 }
                 video_mueller(iz, iy, ix) = m;
             }
@@ -283,42 +293,55 @@ auto fit_mueller(const std::vector<EventEllipsometerDataFrame> &dataframes,
                         // Initialize the best loss (baseline)
                         loss_best = loss_func(m_best);
 
-                        // Update the Mueller matrix via propagation
-                        // std::vector<std::pair<int, int>> neighbors = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-5, 0}, {5, 0}, {0, -5}, {0, 5}};
-
-                        // std::vector<std::tuple<int, int, int>> neighbors = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {-5, 0, 0}, {5, 0, 0}, {0, -5, 0}, {0, 5, 0}, {0, 0, -1}, {0, 0, 1}};
-                        std::vector<std::tuple<int, int, int>> neighbors = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {-5, 0, 0}, {5, 0, 0}, {0, -5, 0}, {0, 5, 0}, {2, -1, 0}, {2, 1, 0}, {2, 0, -1}, {2, 0, 1}, {1, 2, 0}, {1, -2, 0}, {0, 2, 1}, {0, 2, -1}, {3, 0, 0}, {-3, 0, 0}, {0, 3, 0}, {0, -3, 0}, {0, 0, -1}, {0, 0, 1}};
-                        for (auto [dx, dy, dz] : neighbors)
+                        if (!disable_propagation) [[likely]]
                         {
-                            int iy_ = iy + dy;
-                            int ix_ = ix + dx;
-                            int iz_ = iz + dz;
-                            if (iy_ < 0 || iy_ >= height || ix_ < 0 || ix_ >= width || iz_ < 0 || iz_ >= num_frames)
-                            {
-                                continue;
-                            }
+                            // Update the Mueller matrix via propagation
+                            // std::vector<std::pair<int, int>> neighbors = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-5, 0}, {5, 0}, {0, -5}, {0, 5}};
 
-                            Eigen::Vector<float, 16> m = video_mueller(iz_, iy_, ix_);
-                            if (m.array().isNaN().any())
+                            // std::vector<std::tuple<int, int, int>> neighbors = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {-5, 0, 0}, {5, 0, 0}, {0, -5, 0}, {0, 5, 0}, {0, 0, -1}, {0, 0, 1}};
+                            std::vector<std::tuple<int, int, int>> neighbors = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {-5, 0, 0}, {5, 0, 0}, {0, -5, 0}, {0, 5, 0}, {2, -1, 0}, {2, 1, 0}, {2, 0, -1}, {2, 0, 1}, {1, 2, 0}, {1, -2, 0}, {0, 2, 1}, {0, 2, -1}, {3, 0, 0}, {-3, 0, 0}, {0, 3, 0}, {0, -3, 0}, {0, 0, -1}, {0, 0, 1}};
+                            for (auto [dx, dy, dz] : neighbors)
                             {
-                                continue;
-                            }
+                                int iy_ = iy + dy;
+                                int ix_ = ix + dx;
+                                int iz_ = iz + dz;
+                                if (iy_ < 0 || iy_ >= height || ix_ < 0 || ix_ >= width || iz_ < 0 || iz_ >= num_frames)
+                                {
+                                    continue;
+                                }
 
-                            float loss = loss_func(m);
-                            if (loss < loss_best)
-                            {
-                                m_best = m;
-                                loss_best = loss;
+                                Eigen::Vector<float, 16> m = video_mueller(iz_, iy_, ix_);
+                                if (m.array().isNaN().any())
+                                {
+                                    continue;
+                                }
+
+                                float loss = loss_func(m);
+                                if (loss < loss_best)
+                                {
+                                    m_best = m;
+                                    loss_best = loss;
+                                }
                             }
                         }
 
-                        // Refine the Mueller matrix via random perturbation
-                        int seed = ix + iy * width + iz * width * height + i_red_black * width * height * num_frames + iter * width * height * num_frames * 2; // Unique seed for reproducibility
-                        Eigen::Vector<float, 16> m_perturbed = filter_mueller(perturb_mueller(m_best, 0.01, seed));
-                        float loss = loss_func(m_perturbed);
-                        if (loss < loss_best)
+                        if (!disable_random_perturbation) [[likely]]
                         {
-                            m_best = m_perturbed;
+                            // Refine the Mueller matrix via random perturbation
+                            int seed = ix + iy * width + iz * width * height + i_red_black * width * height * num_frames + iter * width * height * num_frames * 2; // Unique seed for reproducibility
+                            // Eigen::Vector<float, 16> m_perturbed = filter_mueller(perturb_mueller(m_best, 0.01, seed));
+
+                            Eigen::Vector<float, 16> m_perturbed = perturb_mueller(m_best, 0.01, seed);
+                            if (!disable_filter) [[likely]]
+                            {
+                                m_perturbed = filter_mueller(m_perturbed);
+                            }
+
+                            float loss = loss_func(m_perturbed);
+                            if (loss < loss_best)
+                            {
+                                m_best = m_perturbed;
+                            }
                         }
 
                         // Update the Mueller matrix
@@ -355,9 +378,9 @@ NB_MODULE(_eventellipsometer_impl, m)
     m.def("svdSolve", [](const nb::DRef<Eigen::Matrix<float, Eigen::Dynamic, 16>> &A)
           { return svdSolve<float, 16>(A); }, nb::arg("A").noconvert(), "Solve Ax = 0\n\nParameters\n----------\nA : numpy.ndarray\n    Matrix A. (n, m)\n\nReturns\n-------\nx : numpy.ndarray\n    Solution x. (m,). The x is normalized by first element.");
 
-    m.def("fit_mueller_svd", &fit_mueller_svd<true>, nb::arg("theta").noconvert(), nb::arg("dlogI").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("max_iter") = 5, nb::arg("tol") = 1e-2, nb::arg("weights").none());
+    m.def("fit_mueller_svd", &fit_mueller_svd<true>, nb::arg("theta").noconvert(), nb::arg("dlogI").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("max_iter") = 5, nb::arg("tol") = 1e-2, nb::arg("weights").none(), nb::arg("disable_filter") = false, "Fit Mueller matrix via SVD.\n\nParameters\n----------\ntheta : numpy.ndarray\n    Theta. (n,)\ndlogI : numpy.ndarray\n    dlogI. (n,)\nphi1 : float\n    Phi1.\nphi2 : float\n    Phi2.\nmax_iter : int\n    Maximum number of iterations.\ntol : float\n    Tolerance for convergence.\nweights : numpy.ndarray\n    Weights. (n,)\ndisable_filter : bool\n    Disable filter.\n\nReturns\n-------\nm : numpy.ndarray\n    Mueller matrix. (16,)");
 
-    m.def("fit_mueller", &fit_mueller, nb::arg("dataframes").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("max_iter_svd") = 5, nb::arg("tol") = 1e-2, nb::arg("max_iter_propagate") = 10, nb::arg("verbose") = false, "Fit Mueller matrix video.\n\nParameters\n----------\ndataframes : list of EventEllipsometerDataFrame\n    List of EventEllipsometerDataFrame.\nphi1 : float\n    Phi1.\nphi2 : float\n    Phi2.\nmax_iter_svd : int\n    Maximum number of iterations for SVD.\ntol : float\n    Tolerance for convergence.\nmax_iter_propagate : int\n    Maximum number of iterations for propagation.\nverbose : bool\n    Verbose mode.\n\nReturns\n-------\nvideo_mueller : numpy.ndarray\n    Video Mueller matrix. (num_frames, height, width, 4, 4)");
+    m.def("fit_mueller", &fit_mueller, nb::arg("dataframes").noconvert(), nb::arg("phi1"), nb::arg("phi2"), nb::arg("max_iter_svd") = 5, nb::arg("tol") = 1e-2, nb::arg("max_iter_propagate") = 10, nb::arg("disable_filter") = false, nb::arg("disable_propagation") = false, nb::arg("disable_random_perturbation") = false, nb::arg("verbose") = false, "Fit Mueller matrix video.\n\nParameters\n----------\ndataframes : list of EventEllipsometerDataFrame\n    List of EventEllipsometerDataFrame.\nphi1 : float\n    Phi1.\nphi2 : float\n    Phi2.\nmax_iter_svd : int\n    Maximum number of iterations for SVD.\ntol : float\n    Tolerance for convergence.\nmax_iter_propagate : int\n    Maximum number of iterations for propagation.\n     Verbose mode.\n\nReturns\n-------\nvideo_mueller : numpy.ndarray\n    Video Mueller matrix. (num_frames, height, width, 4, 4)");
 
     m.def("calculate_ndcoffs", [](const nb::DRef<Eigen::VectorXf> &theta, float phi1, float phi2)
           { return calculate_ndcoffs(theta, phi1, phi2); }, nb::arg("theta").noconvert(), nb::arg("phi1"), nb::arg("phi2"), "Calculate numenator and denominator cofficients");
@@ -384,9 +407,9 @@ NB_MODULE(_eventellipsometer_impl, m)
           { return construct_dataframes(x, y, t, p, width, height, trig_t, trig_p, img_C_on, img_C_off, t_refr); }, nb::arg("x").noconvert(), nb::arg("y").noconvert(), nb::arg("t").noconvert(), nb::arg("p").noconvert(), nb::arg("width"), nb::arg("height"), nb::arg("trig_t").noconvert(), nb::arg("trig_p").noconvert(), nb::arg("img_C_on").noconvert(), nb::arg("img_C_off").noconvert(), nb::arg("t_refr") = 0);
     m.def("construct_dataframes", [](const nb::DRef<Eigen::VectorX<uint16_t>> &x, const nb::DRef<Eigen::VectorX<uint16_t>> &y, const nb::DRef<Eigen::VectorX<int64_t>> &t, const nb::DRef<Eigen::VectorX<int16_t>> &p, int width, int height, const nb::DRef<Eigen::VectorX<int64_t>> &trig_t, const nb::DRef<Eigen::VectorX<int16_t>> &trig_p, float C_on, float C_off, int64_t t_refr = 0)
           {
-              Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> img_C_on = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>::Constant(height, width, C_on);
-              Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> img_C_off = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>::Constant(height, width, C_off);
-              return construct_dataframes(x, y, t, p, width, height, trig_t, trig_p, img_C_on, img_C_off, t_refr); }, nb::arg("x").noconvert(), nb::arg("y").noconvert(), nb::arg("t").noconvert(), nb::arg("p").noconvert(), nb::arg("width"), nb::arg("height"), nb::arg("trig_t").noconvert(), nb::arg("trig_p").noconvert(), nb::arg("C_on"), nb::arg("C_off"), nb::arg("t_refr") = 0);
+        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> img_C_on = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>::Constant(height, width, C_on);
+        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> img_C_off = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic>::Constant(height, width, C_off);
+        return construct_dataframes(x, y, t, p, width, height, trig_t, trig_p, img_C_on, img_C_off, t_refr); }, nb::arg("x").noconvert(), nb::arg("y").noconvert(), nb::arg("t").noconvert(), nb::arg("p").noconvert(), nb::arg("width"), nb::arg("height"), nb::arg("trig_t").noconvert(), nb::arg("trig_p").noconvert(), nb::arg("C_on"), nb::arg("C_off"), nb::arg("t_refr") = 0);
 
     m.def("clean_triggers", &clean_triggers, nb::arg("trig_t_x1").noconvert(), nb::arg("trig_t_x5").noconvert());
     m.def("clean_triggers", [](const nb::DRef<Eigen::VectorX<int64_t>> &trig_t_x1, const nb::DRef<Eigen::VectorX<int64_t>> &trig_t_x5)
@@ -398,7 +421,7 @@ NB_MODULE(_eventellipsometer_impl, m)
         std::move(trig_t_x5.data(), trig_t_x5.data() + trig_t_x5.size(), trig_t_x5_vec.begin());
 
         auto [trig_t_x1_clean_vec, trig_t_x5_clean_vec] = clean_triggers(trig_t_x1_vec, trig_t_x5_vec);
-        
+
         // std::vector to Eigen::Vector
         Eigen::VectorX<int64_t> trig_t_x1_clean(trig_t_x1_clean_vec.size());
         std::move(trig_t_x1_clean_vec.begin(), trig_t_x1_clean_vec.end(), trig_t_x1_clean.data());
